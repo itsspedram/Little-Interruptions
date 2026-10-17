@@ -1,0 +1,18 @@
+{
+  "name": "little-interruptions",
+  "private": true,
+  "version": "0.1.0",
+  "description": "A tiny menu-bar bell that interrupts you, gently, with something kind or silly.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "test": "pnpm -r --if-present test",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "validate:packs": "node scripts/validate-packs.ts",
+    "dev": "pnpm --filter desktop tauri dev",
+    "build": "pnpm --filter desktop tauri build"
+  }
+}
