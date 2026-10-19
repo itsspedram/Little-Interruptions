@@ -136,5 +136,11 @@ export function validateSettings(input: unknown): string[] {
   if (typeof input.soundEnabled !== "boolean") {
     problems.push("soundEnabled must be true or false");
   }
+  if (typeof input.smartPause !== "boolean") {
+    problems.push("smartPause must be true or false");
+  }
+  if (typeof input.showCountdown !== "boolean") {
+    problems.push("showCountdown must be true or false");
+  }
   return problems;
 }

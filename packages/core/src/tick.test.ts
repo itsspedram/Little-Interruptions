@@ -129,3 +129,92 @@ describe("ringing", () => {
     expect(result.ring).toBe(false);
   });
 });
+
+describe("smart pause", () => {
+  const AT_SLOT = T0 + 60 * MIN;
+  const tick = (now: number, busy: boolean | undefined, change: Partial<Settings> = {}, state: State = running(T0)) =>
+    onTick(busy === undefined ? { now, idleSeconds: 0, gapMs: 5000 } : { now, idleSeconds: 0, gapMs: 5000, busy }, settings(change), state);
+
+  it("holds a bell that falls due while the user is busy", () => {
+    const result = tick(AT_SLOT, true);
+    expect(result.ring).toBe(false);
+    expect(result.state.deferredRing).toBe(true);
+  });
+
+  it("rings once the user stops being busy", () => {
+    const held = tick(AT_SLOT, true);
+    const free = tick(AT_SLOT + 5 * MIN, false, {}, held.state);
+    expect(free.ring).toBe(true);
+    expect(free.state.deferredRing).toBe(false);
+  });
+
+  it("keeps holding while the user stays busy", () => {
+    const held = tick(AT_SLOT, true);
+    const still = tick(AT_SLOT + 5 * MIN, true, {}, held.state);
+    expect(still.ring).toBe(false);
+    expect(still.state.deferredRing).toBe(true);
+  });
+
+  it("rings only once after the busy stretch ends", () => {
+    const held = tick(AT_SLOT, true);
+    const free = tick(AT_SLOT + 5 * MIN, false, {}, held.state);
+    const after = tick(AT_SLOT + 5 * MIN + 5000, false, {}, free.state);
+    expect(after.ring).toBe(false);
+  });
+
+  it("rings once, not twice, when a busy stretch spans two slots", () => {
+    const first = tick(AT_SLOT, true);
+    const second = tick(T0 + 120 * MIN, true, {}, first.state);
+    expect(second.ring).toBe(false);
+    const free = tick(T0 + 130 * MIN, false, {}, second.state);
+    expect(free.ring).toBe(true);
+    const after = tick(T0 + 130 * MIN + 5000, false, {}, free.state);
+    expect(after.ring).toBe(false);
+  });
+
+  it("ignores busy when smart pause is off", () => {
+    const result = tick(AT_SLOT, true, { smartPause: false });
+    expect(result.ring).toBe(true);
+    expect(result.state.deferredRing).toBe(false);
+  });
+
+  it("rings a held bell if smart pause is switched off meanwhile", () => {
+    const held = tick(AT_SLOT, true);
+    const result = tick(AT_SLOT + MIN, true, { smartPause: false }, held.state);
+    expect(result.ring).toBe(true);
+    expect(result.state.deferredRing).toBe(false);
+  });
+
+  it("holds nothing when no bell is due", () => {
+    const result = tick(T0 + 10 * MIN, true);
+    expect(result.ring).toBe(false);
+    expect(result.state.deferredRing).toBe(false);
+  });
+
+  it("treats a missing busy flag as not busy", () => {
+    expect(tick(AT_SLOT, undefined).ring).toBe(true);
+  });
+
+  it("drops a held bell when the user goes idle and the session ends", () => {
+    const held = tick(AT_SLOT, true);
+    const result = onTick({ now: AT_SLOT + 30 * MIN, idleSeconds: 600, gapMs: 5000, busy: false }, settings(), held.state);
+    expect(result.state.sessionStartedAt).toBeNull();
+    expect(result.state.deferredRing).toBe(false);
+    expect(result.ring).toBe(false);
+  });
+
+  it("drops a held bell after sleep", () => {
+    const held = tick(AT_SLOT, true);
+    const result = onTick({ now: AT_SLOT + 8 * HOUR, idleSeconds: 1, gapMs: 8 * HOUR, busy: false }, settings(), held.state);
+    expect(result.ring).toBe(false);
+    expect(result.state.deferredRing).toBe(false);
+  });
+
+  it("drops a held bell when the user asks for quiet", () => {
+    const held = tick(AT_SLOT, true);
+    const quiet: State = { ...held.state, pausedUntil: AT_SLOT + 3 * HOUR };
+    const result = tick(AT_SLOT + MIN, false, {}, quiet);
+    expect(result.ring).toBe(false);
+    expect(result.state.deferredRing).toBe(false);
+  });
+});

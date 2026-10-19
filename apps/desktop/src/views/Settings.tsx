@@ -1,13 +1,12 @@
 import { useEffect, useState } from "react";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { INTERVAL_PRESETS } from "@little-interruptions/core";
 import { APP_VERSION, isUpdateSourceConfigured } from "../config.ts";
 import { engine } from "../engine/engine.ts";
 import type { Snapshot } from "../engine/engine.ts";
 import { useEngine } from "../engine/useEngine.ts";
-
-const formatTime = (timestamp: number): string =>
-  new Date(timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+import { BellIcon, Button, Progress, Segmented, Toggle } from "../ui/controls.tsx";
+import { describeStatus } from "../ui/describe.ts";
 
 function formatChecked(timestamp: number | null, now: number): string {
   if (timestamp === null) return "never";
@@ -18,76 +17,16 @@ function formatChecked(timestamp: number | null, now: number): string {
   return hours < 48 ? `${hours} h ago` : `${Math.round(hours / 24)} days ago`;
 }
 
-function Card({ title, children }: { title: string; children: ReactNode }) {
+function Card({ title, order, children }: { title: string; order: number; children: ReactNode }) {
+  const style: CSSProperties = { animationDelay: `${80 + order * 60}ms` };
   return (
-    <section className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-stone-200 dark:bg-stone-800 dark:ring-stone-700">
-      <h2 className="mb-3 text-xs font-semibold tracking-wide text-stone-500 uppercase dark:text-stone-400">{title}</h2>
-      <div className="space-y-3">{children}</div>
-    </section>
-  );
-}
-
-function Button({
-  children,
-  onClick,
-  disabled = false,
-  tone = "neutral",
-}: {
-  children: ReactNode;
-  onClick: () => void;
-  disabled?: boolean;
-  tone?: "neutral" | "accent";
-}) {
-  const colors =
-    tone === "accent"
-      ? "bg-amber-500 text-white hover:bg-amber-600"
-      : "bg-stone-100 text-stone-800 hover:bg-stone-200 dark:bg-stone-700 dark:text-stone-100 dark:hover:bg-stone-600";
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className={`rounded-lg px-3 py-1.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${colors}`}
+    <section
+      className="animate-rise rounded-card border border-line bg-surface p-[18px] motion-reduce:animate-none"
+      style={style}
     >
-      {children}
-    </button>
-  );
-}
-
-function Toggle({
-  checked,
-  onChange,
-  label,
-  hint,
-}: {
-  checked: boolean;
-  onChange: (next: boolean) => void;
-  label: string;
-  hint?: string;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-4">
-      <div>
-        <div className="text-sm font-medium text-stone-800 dark:text-stone-100">{label}</div>
-        {hint ? <div className="text-xs text-stone-500 dark:text-stone-400">{hint}</div> : null}
-      </div>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={checked}
-        aria-label={label}
-        onClick={() => onChange(!checked)}
-        className={`relative h-6 w-11 shrink-0 rounded-full transition ${
-          checked ? "bg-amber-500" : "bg-stone-300 dark:bg-stone-600"
-        }`}
-      >
-        <span
-          className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition ${
-            checked ? "translate-x-5" : ""
-          }`}
-        />
-      </button>
-    </div>
+      <h2 className="mb-3 text-[11px] font-semibold tracking-[0.14em] text-muted uppercase">{title}</h2>
+      <div className="space-y-4">{children}</div>
+    </section>
   );
 }
 
@@ -119,9 +58,9 @@ function MinutesField({
   return (
     <label className="flex items-center justify-between gap-4">
       <span>
-        <span className="block text-sm font-medium text-stone-800 dark:text-stone-100">{label}</span>
-        {hint ? <span className="block text-xs text-stone-500 dark:text-stone-400">{hint}</span> : null}
-        {error ? <span className="block text-xs text-red-600 dark:text-red-400">{error}</span> : null}
+        <span className="block text-sm font-medium text-ink">{label}</span>
+        {hint ? <span className="mt-0.5 block text-xs text-muted">{hint}</span> : null}
+        {error ? <span className="mt-0.5 block text-xs text-red-600 dark:text-red-300">{error}</span> : null}
       </span>
       <input
         type="number"
@@ -134,13 +73,18 @@ function MinutesField({
         onKeyDown={(event) => {
           if (event.key === "Enter") event.currentTarget.blur();
         }}
-        className="w-20 rounded-lg border border-stone-300 bg-white px-2 py-1 text-right text-sm text-stone-800 dark:border-stone-600 dark:bg-stone-900 dark:text-stone-100"
+        className="w-20 rounded-ctl border border-line bg-well px-3 py-1.5 text-right text-sm text-ink tabular-nums transition-shadow outline-none focus:ring-2 focus:ring-accent/50"
       />
     </label>
   );
 }
 
-const PRESET_LABELS: Record<number, string> = { 60: "1 hour", 90: "1.5 hours", 120: "2 hours" };
+type IntervalChoice = number | "custom";
+
+const INTERVAL_OPTIONS: { value: IntervalChoice; label: string }[] = [
+  ...INTERVAL_PRESETS.map((minutes) => ({ value: minutes, label: minutes === 90 ? "1.5 hours" : `${minutes / 60} hour${minutes > 60 ? "s" : ""}` })),
+  { value: "custom", label: "Custom" },
+];
 
 function IntervalPicker({ minutes }: { minutes: number }) {
   const isPreset = (INTERVAL_PRESETS as readonly number[]).includes(minutes);
@@ -148,66 +92,32 @@ function IntervalPicker({ minutes }: { minutes: number }) {
   const showCustom = customChosen || !isPreset;
 
   return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-4 gap-1 rounded-xl bg-stone-100 p-1 dark:bg-stone-900" role="group" aria-label="Interval">
-        {INTERVAL_PRESETS.map((preset) => {
-          const active = !showCustom && minutes === preset;
-          return (
-            <button
-              key={preset}
-              type="button"
-              aria-pressed={active}
-              onClick={() => {
-                setCustomChosen(false);
-                engine.updateSettings({ intervalMinutes: preset });
-              }}
-              className={`rounded-lg px-2 py-1.5 text-sm font-medium transition ${
-                active
-                  ? "bg-white text-stone-900 shadow-sm dark:bg-stone-700 dark:text-white"
-                  : "text-stone-600 hover:text-stone-900 dark:text-stone-300 dark:hover:text-white"
-              }`}
-            >
-              {PRESET_LABELS[preset]}
-            </button>
-          );
-        })}
-        <button
-          type="button"
-          aria-pressed={showCustom}
-          onClick={() => setCustomChosen(true)}
-          className={`rounded-lg px-2 py-1.5 text-sm font-medium transition ${
-            showCustom
-              ? "bg-white text-stone-900 shadow-sm dark:bg-stone-700 dark:text-white"
-              : "text-stone-600 hover:text-stone-900 dark:text-stone-300 dark:hover:text-white"
-          }`}
-        >
-          Custom
-        </button>
-      </div>
+    <div className="space-y-4">
+      <Segmented<IntervalChoice>
+        label="Interval"
+        options={INTERVAL_OPTIONS}
+        value={showCustom ? "custom" : minutes}
+        onChange={(choice) => {
+          if (choice === "custom") {
+            setCustomChosen(true);
+            return;
+          }
+          setCustomChosen(false);
+          engine.updateSettings({ intervalMinutes: choice });
+        }}
+      />
       {showCustom ? (
-        <MinutesField
-          label="Every"
-          hint="minutes"
-          value={minutes}
-          onCommit={(value) => engine.updateSettings({ intervalMinutes: value })}
-        />
+        <div className="animate-rise motion-reduce:animate-none">
+          <MinutesField
+            label="Every"
+            hint="minutes"
+            value={minutes}
+            onCommit={(value) => engine.updateSettings({ intervalMinutes: value })}
+          />
+        </div>
       ) : null}
     </div>
   );
-}
-
-function statusLine(snapshot: Snapshot): { title: string; detail: string } {
-  const { state, nextFireAt, now } = snapshot;
-  if (state.pausedUntil !== null && state.pausedUntil > now) {
-    return { title: `Quiet until ${formatTime(state.pausedUntil)}`, detail: "No bells until then." };
-  }
-  if (state.sessionStartedAt !== null && nextFireAt !== null) {
-    return { title: `Next bell around ${formatTime(nextFireAt)}`, detail: "You're here, so the clock is running." };
-  }
-  return {
-    title: "Resting",
-    detail: "The bell starts counting when you're back at the keyboard.",
-  };
 }
 
 function syncText(snapshot: Snapshot): string {
@@ -226,34 +136,47 @@ function syncText(snapshot: Snapshot): string {
 
 export function SettingsView() {
   const snapshot = useEngine();
-  const { settings, state, now } = snapshot;
-  const status = statusLine(snapshot);
-  const paused = state.pausedUntil !== null && state.pausedUntil > now;
+  const { settings } = snapshot;
+  const status = describeStatus(snapshot.status);
+  const paused = snapshot.status.kind === "quiet";
+  const running = snapshot.status.kind === "running";
+  const progress = snapshot.status.kind === "running" ? snapshot.status.progress : 0;
 
   return (
-    <main className="min-h-full bg-stone-50 px-5 py-5 text-stone-800 dark:bg-stone-900 dark:text-stone-100">
-      <header className="mb-4">
-        <h1 className="text-xl font-semibold">Little Interruptions</h1>
-        <p className="text-sm text-stone-500 dark:text-stone-400">A tiny bell that checks in on you.</p>
+    <main className="min-h-full bg-ground px-5 py-6 text-ink">
+      <header className="mb-5 flex animate-rise items-center gap-3 motion-reduce:animate-none">
+        <span className="flex h-10 w-10 items-center justify-center rounded-ctl bg-chip text-chip-ink">
+          <BellIcon />
+        </span>
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight">Little Interruptions</h1>
+          <p className="text-sm text-muted">A tiny bell that checks in on you.</p>
+        </div>
       </header>
 
       <div className="space-y-4">
-        <Card title="Right now">
+        <Card title="Right now" order={0}>
           <div>
             <div className="text-base font-semibold">{status.title}</div>
-            <div className="text-sm text-stone-500 dark:text-stone-400">{status.detail}</div>
+            <div className="mt-0.5 text-sm text-muted">{status.detail}</div>
           </div>
+          <Progress value={progress} live={running} />
           <div className="flex flex-wrap gap-2">
-            <Button onClick={() => void engine.ring()} tone="accent">
+            <Button tone="accent" onClick={() => void engine.ring()}>
               Ring now
             </Button>
-            <Button onClick={() => engine.pauseFor(60)}>Quiet for 1 hour</Button>
-            <Button onClick={() => engine.pauseFor(180)}>3 hours</Button>
-            {paused ? <Button onClick={() => engine.resumeNow()}>Back to normal</Button> : null}
+            {paused ? (
+              <Button onClick={() => engine.resumeNow()}>Back to normal</Button>
+            ) : (
+              <>
+                <Button onClick={() => engine.pauseFor(60)}>Quiet for 1 hour</Button>
+                <Button onClick={() => engine.pauseFor(180)}>3 hours</Button>
+              </>
+            )}
           </div>
         </Card>
 
-        <Card title="How often">
+        <Card title="How often" order={1}>
           <IntervalPicker minutes={settings.intervalMinutes} />
           <MinutesField
             label="Treat me as away after"
@@ -266,9 +189,21 @@ export function SettingsView() {
             checked={settings.soundEnabled}
             onChange={(next) => engine.updateSettings({ soundEnabled: next })}
           />
+          <Toggle
+            label="Wait if I'm busy"
+            hint="During calls, video and presentations the bell holds back, then rings when you're done. macOS only."
+            checked={settings.smartPause}
+            onChange={(next) => engine.updateSettings({ smartPause: next })}
+          />
+          <Toggle
+            label="Show time left in the menu bar"
+            hint="A small countdown next to the bell icon. macOS only."
+            checked={settings.showCountdown}
+            onChange={(next) => engine.updateSettings({ showCountdown: next })}
+          />
         </Card>
 
-        <Card title="Messages">
+        <Card title="Messages" order={2}>
           <ul className="space-y-2">
             {snapshot.packs.map((pack) => (
               <li key={pack.collection}>
@@ -277,10 +212,10 @@ export function SettingsView() {
                     type="checkbox"
                     checked={settings.enabledPacks.includes(pack.collection)}
                     onChange={(event) => engine.setPackEnabled(pack.collection, event.target.checked)}
-                    className="h-4 w-4 accent-amber-500"
+                    className="h-4 w-4 accent-accent"
                   />
                   <span className="font-medium">{pack.collection}</span>
-                  <span className="text-stone-500 dark:text-stone-400">
+                  <span className="text-muted">
                     {pack.count} messages · {pack.locale}
                   </span>
                 </label>
@@ -294,7 +229,7 @@ export function SettingsView() {
             onChange={(next) => engine.updateSettings({ autoUpdatePacks: next })}
           />
           <div className="flex items-center justify-between gap-3">
-            <span className="text-xs text-stone-500 dark:text-stone-400">{syncText(snapshot)}</span>
+            <span className="text-xs text-muted">{syncText(snapshot)}</span>
             <Button
               onClick={() => void engine.checkForUpdates()}
               disabled={snapshot.sync.kind === "checking" || !isUpdateSourceConfigured()}
@@ -305,7 +240,7 @@ export function SettingsView() {
         </Card>
       </div>
 
-      <footer className="mt-5 text-center text-xs text-stone-400 dark:text-stone-500">
+      <footer className="mt-6 text-center text-xs text-muted">
         Version {APP_VERSION} · Everything stays on this computer.
       </footer>
     </main>

@@ -152,6 +152,11 @@ describe("validateSettings", () => {
     expect(validateSettings(withChange({ soundEnabled: "yes" })).length).toBeGreaterThan(0);
   });
 
+  it("rejects a missing smartPause or showCountdown flag", () => {
+    expect(validateSettings(withChange({ smartPause: undefined })).length).toBeGreaterThan(0);
+    expect(validateSettings(withChange({ showCountdown: "yes" })).length).toBeGreaterThan(0);
+  });
+
   it("rejects an unknown settings version", () => {
     expect(validateSettings(withChange({ version: 2 })).length).toBeGreaterThan(0);
   });

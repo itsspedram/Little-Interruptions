@@ -147,3 +147,11 @@ organization, and the README for the core.
 - **Settings:** `soundEnabled` added. `parseSettings` / `parseState` rebuild persisted data field by field and never throw.
 - **`onTick`:** the shell sends `{now, idleSeconds, gapMs}` every 5 s; core decides to end a session (sleep gap ≥ 60 s or idle ≥ `idleMinutes`), start one (activity within 15 s) and whether to ring.
 - **Open:** Tauri not formally confirmed; pack content license undecided; no autostart; DND not respected.
+
+## v4 additions (menu bar, quick panel, smart pause)
+
+- **Smart pause.** `TickInput.busy` (from the shell), `Settings.smartPause` (default on), `State.deferredRing`. A bell that falls due while busy is held and rings once at the first non-busy tick. It is dropped when the session ends (idle, sleep) or the user asks for quiet, and never replays more than once even if the busy stretch spans several slots. The macOS shell derives `busy` from `pmset -g assertions` (display held awake), sampled every 15 s.
+- **Status.** `getStatus` / `formatRemaining` / `trayTitle` in core produce what the menu bar title, tooltip and quick panel show. `Settings.showCountdown` hides the menu bar countdown.
+- **Quick panel.** A third window (`panel`) opens under the tray icon on left click and closes on blur. It holds no engine; the engine in the settings window emits a `status` event and handles `menu` actions.
+- **macOS transparency.** Transparent windows need `macOSPrivateApi` in `tauri.conf.json` and the `macos-private-api` Cargo feature (not App Store compatible).
+- **Open:** screen-recording detection, camera/mic detection, Focus/DND, autostart.

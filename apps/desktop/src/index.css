@@ -1,7 +1,148 @@
 @import "tailwindcss";
 
+/*
+ * Two themes, picked by the system appearance:
+ *   light = "Morning Mist" (sage, white cards, teal, a little peach at the bell)
+ *   dark  = "Dusk Ink"     (evening navy, moonlight text, lavender, warm bell glow)
+ * Components only use the semantic names below (bg-surface, text-ink, …), never raw colors.
+ */
+@theme {
+  --color-ground: #e9f0ec;
+  --color-surface: #ffffff;
+  --color-line: #dce6df;
+  --color-soft: #eaf3ee;
+  --color-well: #eaf3ee;
+  --color-thumb: #ffffff;
+  --color-ink: #1e2b26;
+  --color-muted: #5b6e66;
+  --color-accent: #2f7d6b;
+  --color-on-accent: #ffffff;
+  --color-fill-from: #7cc6ad;
+  --color-fill-to: #2f7d6b;
+  --color-track: #e3ece7;
+  --color-chip: #fbe7d6;
+  --color-chip-ink: #b05f2e;
+  --color-glow: #f0b488;
+  --color-toggle-off: #d5e1da;
+  --color-knob: #ffffff;
+
+  --radius-card: 26px;
+  --radius-ctl: 999px;
+  --radius-thumb: 999px;
+
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-glide: cubic-bezier(0.65, 0, 0.35, 1);
+
+  --animate-rise: rise 520ms var(--ease-out-soft) both;
+  --animate-panel-in: panel-in 380ms var(--ease-out-soft) both;
+  --animate-sweep: sweep 2.8s ease-in-out infinite;
+  --animate-ripple: ripple 1.4s var(--ease-out-soft) both;
+  --animate-bell-swing: bell-swing 1.5s ease-in-out 0.15s both;
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes panel-in {
+    from {
+      opacity: 0;
+      transform: scale(0.95) translateY(-8px);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+
+  @keyframes sweep {
+    from {
+      transform: translateX(-120%);
+    }
+    to {
+      transform: translateX(320%);
+    }
+  }
+
+  @keyframes ripple {
+    0% {
+      opacity: 0;
+      transform: scale(0.7);
+    }
+    15% {
+      opacity: 0.65;
+    }
+    100% {
+      opacity: 0;
+      transform: scale(1.8);
+    }
+  }
+
+  @keyframes bell-swing {
+    0%,
+    100% {
+      transform: rotate(0deg);
+    }
+    12% {
+      transform: rotate(16deg);
+    }
+    30% {
+      transform: rotate(-13deg);
+    }
+    48% {
+      transform: rotate(9deg);
+    }
+    66% {
+      transform: rotate(-5deg);
+    }
+    84% {
+      transform: rotate(2deg);
+    }
+  }
+}
+
 :root {
   color-scheme: light dark;
+  /* Plain variables, not theme tokens: Tailwind bakes theme shadows in at build time, so they could not switch with the theme. */
+  --shadow-card: 0 10px 24px -8px rgb(31 60 48 / 0.28);
+  --shadow-thumb: 0 2px 6px rgb(31 60 48 / 0.16);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-ground: #0e1020;
+    --color-surface: #1a1d2e;
+    --color-line: rgb(255 255 255 / 0.08);
+    --color-soft: #252945;
+    --color-well: #12142a;
+    --color-thumb: #2f3459;
+    --color-ink: #eceaf6;
+    --color-muted: #a6a9c4;
+    --color-accent: #a5b4ff;
+    --color-on-accent: #12142a;
+    --color-fill-from: #8e9cff;
+    --color-fill-to: #c3cbff;
+    --color-track: #262a45;
+    --color-chip: #252945;
+    --color-chip-ink: #ffd9a8;
+    --color-glow: #ffd9a8;
+    --color-toggle-off: #2f3459;
+    --color-knob: #ffffff;
+
+    --radius-card: 22px;
+    --radius-ctl: 13px;
+    --radius-thumb: 10px;
+
+    --shadow-card: 0 10px 24px -8px rgb(0 0 0 / 0.6);
+    --shadow-thumb: none;
+  }
 }
 
 html,
@@ -16,9 +157,13 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* The popup window is transparent so its rounded card floats on the desktop. */
+/* The popup and the quick panel are transparent windows, so their rounded cards float on the desktop. */
 html[data-view="popup"],
-html[data-view="popup"] body {
+html[data-view="popup"] body,
+html[data-view="panel"],
+html[data-view="panel"] body {
   background: transparent;
   overflow: hidden;
+  user-select: none;
+  cursor: default;
 }

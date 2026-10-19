@@ -1,10 +1,12 @@
 // Keeps Windows release builds from opening a console window.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod busy;
 mod idle;
 mod sound;
 
 use std::{
+    sync::atomic::{AtomicU64, Ordering},
     thread,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
@@ -13,12 +15,23 @@ use serde::Serialize;
 use tauri::{
     image::Image,
     menu::{Menu, MenuItem, PredefinedMenuItem},
-    tray::TrayIconBuilder,
-    AppHandle, Emitter, Manager, PhysicalPosition, WebviewWindow, WindowEvent,
+    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
+    AppHandle, Emitter, Manager, PhysicalPosition, Rect, WebviewWindow, WindowEvent,
 };
 
 /// How often the heartbeat reaches the engine living in the hidden settings window.
 const TICK_EVERY: Duration = Duration::from_secs(5);
+/// Asking the system whether the user is busy costs a process launch, so do it every Nth tick.
+const BUSY_CHECK_EVERY_TICKS: u32 = 3;
+
+const TRAY_ID: &str = "main";
+const PANEL_MARGIN: f64 = 8.0;
+/// A click on the tray icon while the panel is open first blurs (hides) the panel and then
+/// reaches us as a click. Within this window we treat that click as "close", not "reopen".
+const PANEL_REOPEN_GUARD_MS: u64 = 300;
+
+/// When the panel last hid itself because it lost focus.
+static PANEL_HIDDEN_AT: AtomicU64 = AtomicU64::new(0);
 
 /// Popup layout in logical (point) units; the window itself is declared in tauri.conf.json.
 const POPUP_WIDTH: f64 = 360.0;
@@ -33,6 +46,7 @@ struct TickPayload {
     now: u64,
     idle_seconds: f64,
     gap_ms: u64,
+    busy: bool,
 }
 
 #[derive(Clone, Serialize)]
@@ -90,11 +104,93 @@ fn show_popup(
     Ok(())
 }
 
+/// Updates the text next to the menu bar icon and the hover tooltip.
+#[tauri::command]
+fn set_tray_status(app: AppHandle, title: String, tooltip: String) {
+    if let Some(tray) = app.tray_by_id(TRAY_ID) {
+        let _ = tray.set_title(if title.is_empty() {
+            None
+        } else {
+            Some(title.as_str())
+        });
+        let _ = tray.set_tooltip(Some(tooltip.as_str()));
+    }
+}
+
+/// Buttons in the quick panel. Most are handled by the engine; a few need the shell.
+#[tauri::command]
+fn panel_action(app: AppHandle, id: String) {
+    // Changing the interval keeps the panel open so the change can be seen; everything else closes it.
+    if !id.starts_with("interval:") {
+        hide_panel(&app);
+    }
+    match id.as_str() {
+        "quit" => app.exit(0),
+        "settings" => show_settings(&app),
+        "close" => {}
+        other => {
+            let _ = app.emit_to("main", "menu", other.to_string());
+        }
+    }
+}
+
 #[tauri::command]
 fn hide_popup(app: AppHandle) {
     if let Some(popup) = app.get_webview_window("popup") {
         let _ = popup.hide();
     }
+}
+
+fn hide_panel(app: &AppHandle) {
+    if let Some(panel) = app.get_webview_window("panel") {
+        let _ = panel.hide();
+    }
+}
+
+/// Opens the quick panel under the tray icon, or closes it if it is already open.
+fn toggle_panel(app: &AppHandle, icon: Rect) {
+    let Some(panel) = app.get_webview_window("panel") else {
+        return;
+    };
+    if panel.is_visible().unwrap_or(false) {
+        let _ = panel.hide();
+        return;
+    }
+    if now_ms().saturating_sub(PANEL_HIDDEN_AT.load(Ordering::Relaxed)) < PANEL_REOPEN_GUARD_MS {
+        return;
+    }
+    place_panel(&panel, icon);
+    let _ = panel.show();
+    let _ = panel.set_focus();
+    // Ask the engine to send fresh numbers right away.
+    let _ = app.emit_to("main", "menu", "panel_opened".to_string());
+}
+
+/// Centers the panel under the tray icon on macOS (menu bar on top) and above it elsewhere
+/// (taskbar at the bottom), keeping it inside the screen.
+fn place_panel(panel: &WebviewWindow, icon: Rect) {
+    let scale = panel.scale_factor().unwrap_or(1.0);
+    let icon_position = icon.position.to_physical::<f64>(scale);
+    let icon_size = icon.size.to_physical::<f64>(scale);
+    let Ok(panel_size) = panel.outer_size() else {
+        return;
+    };
+    let width = panel_size.width as f64;
+    let height = panel_size.height as f64;
+    let margin = PANEL_MARGIN * scale;
+
+    let mut x = icon_position.x + icon_size.width / 2.0 - width / 2.0;
+    if let Ok(Some(monitor)) = panel.primary_monitor() {
+        let left = monitor.position().x as f64 + margin;
+        let right = monitor.position().x as f64 + monitor.size().width as f64 - width - margin;
+        x = x.min(right).max(left);
+    }
+    let y = if cfg!(target_os = "macos") {
+        icon_position.y + icon_size.height + 4.0 * scale
+    } else {
+        icon_position.y - height - margin
+    };
+    let _ = panel.set_position(PhysicalPosition::new(x as i32, y as i32));
 }
 
 fn show_settings(app: &AppHandle) {
@@ -132,12 +228,24 @@ fn build_tray(app: &tauri::App) -> tauri::Result<()> {
     // A black bell on a transparent background; macOS recolors it for light and dark menu bars.
     let icon = Image::from_bytes(include_bytes!("../icons/tray.png"))?;
 
-    let _tray = TrayIconBuilder::new()
+    // Left click opens the quick panel; right click (or ctrl-click) shows this menu.
+    let _tray = TrayIconBuilder::with_id(TRAY_ID)
         .icon(icon)
         .icon_as_template(true)
         .tooltip("Little Interruptions")
         .menu(&menu)
-        .show_menu_on_left_click(true)
+        .show_menu_on_left_click(false)
+        .on_tray_icon_event(|tray, event| {
+            if let TrayIconEvent::Click {
+                button: MouseButton::Left,
+                button_state: MouseButtonState::Up,
+                rect,
+                ..
+            } = event
+            {
+                toggle_panel(tray.app_handle(), rect);
+            }
+        })
         .on_menu_event(|app, event| match event.id.as_ref() {
             "quit" => app.exit(0),
             "settings" => show_settings(app),
@@ -156,12 +264,20 @@ fn start_ticker(app: AppHandle) {
     thread::spawn(move || {
         let mut last = now_ms();
         let mut first = true;
+        let mut ticks_until_busy_check = 0;
+        let mut busy = false;
         loop {
             thread::sleep(TICK_EVERY);
             let now = now_ms();
             let gap_ms = if first { 0 } else { now.saturating_sub(last) };
             first = false;
             last = now;
+
+            if ticks_until_busy_check == 0 {
+                busy = busy::is_busy();
+                ticks_until_busy_check = BUSY_CHECK_EVERY_TICKS;
+            }
+            ticks_until_busy_check -= 1;
             let _ = app.emit_to(
                 "main",
                 "tick",
@@ -169,6 +285,7 @@ fn start_ticker(app: AppHandle) {
                     now,
                     idle_seconds: idle::idle_seconds(),
                     gap_ms,
+                    busy,
                 },
             );
         }
@@ -177,15 +294,24 @@ fn start_ticker(app: AppHandle) {
 
 fn main() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![show_popup, hide_popup])
-        .on_window_event(|window, event| {
+        .invoke_handler(tauri::generate_handler![
+            show_popup,
+            hide_popup,
+            set_tray_status,
+            panel_action
+        ])
+        .on_window_event(|window, event| match event {
             // Closing the settings window only hides it; the app lives in the tray.
-            if let WindowEvent::CloseRequested { api, .. } = event {
-                if window.label() == "main" {
-                    api.prevent_close();
-                    let _ = window.hide();
-                }
+            WindowEvent::CloseRequested { api, .. } if window.label() == "main" => {
+                api.prevent_close();
+                let _ = window.hide();
             }
+            // The quick panel behaves like a menu: clicking anywhere else dismisses it.
+            WindowEvent::Focused(false) if window.label() == "panel" => {
+                PANEL_HIDDEN_AT.store(now_ms(), Ordering::Relaxed);
+                let _ = window.hide();
+            }
+            _ => {}
         })
         .setup(|app| {
             #[cfg(target_os = "macos")]

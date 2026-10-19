@@ -21,6 +21,10 @@ export interface Settings {
   autoUpdatePacks: boolean;
   /** Whether the bell sound plays together with the message. */
   soundEnabled: boolean;
+  /** Hold a due bell while the user is busy (meeting, video, presentation) and ring when they are done. */
+  smartPause: boolean;
+  /** Whether the menu bar shows the time left until the next bell. */
+  showCountdown: boolean;
 }
 
 export interface State {
@@ -33,6 +37,8 @@ export interface State {
   bag: string[];
   /** When the last successful message update check happened, or null if never. */
   lastPackCheckAt: number | null;
+  /** A bell fell due while the user was busy and is waiting for them to finish. */
+  deferredRing: boolean;
 }
 
 export interface Message {

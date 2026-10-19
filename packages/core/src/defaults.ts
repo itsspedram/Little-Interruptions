@@ -10,6 +10,8 @@ export function createDefaultSettings(): Settings {
     enabledPacks: [DEFAULT_PACK],
     autoUpdatePacks: true,
     soundEnabled: true,
+    smartPause: true,
+    showCountdown: true,
   };
 }
 
@@ -20,5 +22,6 @@ export function createInitialState(): State {
     pausedUntil: null,
     bag: [],
     lastPackCheckAt: null,
+    deferredRing: false,
   };
 }

@@ -8,9 +8,9 @@ export function startSession(state: State, now: number): State {
   return { ...state, sessionStartedAt: now };
 }
 
-/** End the session (idle, lock, sleep). The shuffle bag and any pause survive. */
+/** End the session (idle, lock, sleep). The shuffle bag and any pause survive; a held bell does not. */
 export function endSession(state: State): State {
-  return { ...state, sessionStartedAt: null };
+  return { ...state, sessionStartedAt: null, deferredRing: false };
 }
 
 export function pauseUntil(state: State, until: number): State {

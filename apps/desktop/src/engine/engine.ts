@@ -1,23 +1,27 @@
 import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
+import { emit, listen } from "@tauri-apps/api/event";
 import {
   collectMessages,
   endSession,
+  getStatus,
   mergePack,
-  nextFireTime,
   onTick,
   pauseUntil,
   pickMessage,
   recordPackCheck,
   resume,
   shouldCheckForUpdates,
+  trayTitle,
   validateSettings,
 } from "@little-interruptions/core";
-import type { Message, Settings, State } from "@little-interruptions/core";
+import type { Message, Settings, State, Status } from "@little-interruptions/core";
 import { PACK_BASE_URL, isUpdateSourceConfigured } from "../config.ts";
 import { loadPacks } from "./packs.ts";
 import type { PackEntry } from "./packs.ts";
 import { storage } from "./storage.ts";
+import { describeStatus } from "../ui/describe.ts";
+import { PANEL_STATUS_EVENT } from "../ui/panelTypes.ts";
+import type { PanelPayload } from "../ui/panelTypes.ts";
 
 const HOUR_MS = 60 * 60 * 1000;
 const FETCH_TIMEOUT_MS = 15_000;
@@ -28,6 +32,7 @@ interface TickPayload {
   now: number;
   idleSeconds: number;
   gapMs: number;
+  busy: boolean;
 }
 
 export type SyncStatus =
@@ -48,7 +53,7 @@ export interface Snapshot {
   state: State;
   packs: PackSummary[];
   messageCount: number;
-  nextFireAt: number | null;
+  status: Status;
   now: number;
   sync: SyncStatus;
   isNative: boolean;
@@ -95,6 +100,8 @@ class Engine {
   private syncing = false;
   private retryAt = 0;
   private started = false;
+  private busy = false;
+  private lastTrayKey = "";
   private snapshot: Snapshot;
 
   constructor() {
@@ -125,7 +132,7 @@ class Engine {
     let last = Date.now();
     window.setInterval(() => {
       const now = Date.now();
-      this.handleTick({ now, idleSeconds: 0, gapMs: now - last });
+      this.handleTick({ now, idleSeconds: 0, gapMs: now - last, busy: false });
       last = now;
     }, BROWSER_TICK_MS);
   }
@@ -235,6 +242,7 @@ class Engine {
   }
 
   private handleTick(payload: TickPayload): void {
+    this.busy = payload.busy;
     const result = onTick(payload, this.settings, this.state);
     if (result.state !== this.state) {
       this.state = result.state;
@@ -259,7 +267,12 @@ class Engine {
       case "resume":
         this.resumeNow();
         break;
+      case "panel_opened":
+        // The quick panel just opened; send it fresh numbers.
+        this.commit();
+        break;
       default:
+        if (id.startsWith("interval:")) this.updateSettings({ intervalMinutes: Number(id.slice("interval:".length)) });
         break;
     }
   }
@@ -285,7 +298,7 @@ class Engine {
         count: pack.messages.length,
       })),
       messageCount: messages.length,
-      nextFireAt: nextFireTime(now, this.settings, this.state),
+      status: getStatus(now, this.settings, this.state, this.busy),
       now,
       sync: this.syncStatus,
       isNative: isNative(),
@@ -295,6 +308,24 @@ class Engine {
   private commit(now: number = Date.now()): void {
     this.snapshot = this.buildSnapshot(now);
     for (const listener of this.listeners) listener();
+    this.publish();
+  }
+
+  /** Push the live status to the menu bar and to the quick panel. */
+  private publish(): void {
+    if (!isNative()) return;
+    const { status, settings, now } = this.snapshot;
+
+    const title = trayTitle(status, settings);
+    const tooltip = `Little Interruptions · ${describeStatus(status).title}`;
+    const key = `${title}\u0000${tooltip}`;
+    if (key !== this.lastTrayKey) {
+      this.lastTrayKey = key;
+      void invoke("set_tray_status", { title, tooltip });
+    }
+
+    const payload: PanelPayload = { status, intervalMinutes: settings.intervalMinutes, now };
+    void emit(PANEL_STATUS_EVENT, payload);
   }
 }
 

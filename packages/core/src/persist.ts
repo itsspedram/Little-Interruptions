@@ -19,7 +19,7 @@ export function parseSettings(input: unknown): Settings {
   const defaults = createDefaultSettings();
   if (!isRecord(input)) return defaults;
 
-  const { intervalMinutes, idleMinutes, enabledPacks, autoUpdatePacks, soundEnabled } = input;
+  const { intervalMinutes, idleMinutes, enabledPacks, autoUpdatePacks, soundEnabled, smartPause, showCountdown } = input;
   return {
     version: 1,
     intervalMinutes: isWholeMinutes(intervalMinutes) ? intervalMinutes : defaults.intervalMinutes,
@@ -27,6 +27,8 @@ export function parseSettings(input: unknown): Settings {
     enabledPacks: isStringList(enabledPacks) ? [...enabledPacks] : defaults.enabledPacks,
     autoUpdatePacks: typeof autoUpdatePacks === "boolean" ? autoUpdatePacks : defaults.autoUpdatePacks,
     soundEnabled: typeof soundEnabled === "boolean" ? soundEnabled : defaults.soundEnabled,
+    smartPause: typeof smartPause === "boolean" ? smartPause : defaults.smartPause,
+    showCountdown: typeof showCountdown === "boolean" ? showCountdown : defaults.showCountdown,
   };
 }
 
@@ -35,12 +37,13 @@ export function parseState(input: unknown): State {
   const initial = createInitialState();
   if (!isRecord(input)) return initial;
 
-  const { sessionStartedAt, pausedUntil, bag, lastPackCheckAt } = input;
+  const { sessionStartedAt, pausedUntil, bag, lastPackCheckAt, deferredRing } = input;
   return {
     version: 1,
     sessionStartedAt: isTimestamp(sessionStartedAt) ? sessionStartedAt : null,
     pausedUntil: isTimestamp(pausedUntil) ? pausedUntil : null,
     bag: isStringList(bag) ? [...bag] : initial.bag,
     lastPackCheckAt: isTimestamp(lastPackCheckAt) ? lastPackCheckAt : null,
+    deferredRing: deferredRing === true,
   };
 }

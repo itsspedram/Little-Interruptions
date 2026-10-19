@@ -19,6 +19,8 @@ describe("parseSettings", () => {
       enabledPacks: ["Little Interruptions", "Other"],
       autoUpdatePacks: false,
       soundEnabled: false,
+      smartPause: false,
+      showCountdown: false,
     };
     expect(parseSettings(saved)).toEqual(saved);
   });
@@ -28,6 +30,8 @@ describe("parseSettings", () => {
     expect(result.intervalMinutes).toBe(90);
     expect(result.soundEnabled).toBe(true);
     expect(result.autoUpdatePacks).toBe(true);
+    expect(result.smartPause).toBe(true);
+    expect(result.showCountdown).toBe(true);
   });
 
   it("replaces only the invalid field with its default", () => {
@@ -43,6 +47,8 @@ describe("parseSettings", () => {
       "enabledPacks",
       "idleMinutes",
       "intervalMinutes",
+      "showCountdown",
+      "smartPause",
       "soundEnabled",
       "version",
     ]);
@@ -53,7 +59,7 @@ describe("parseSettings", () => {
       undefined,
       42,
       {},
-      { intervalMinutes: "60", idleMinutes: -1, enabledPacks: [1, 2], autoUpdatePacks: "yes", soundEnabled: 0 },
+      { intervalMinutes: "60", idleMinutes: -1, enabledPacks: [1, 2], autoUpdatePacks: "yes", soundEnabled: 0, smartPause: "on", showCountdown: 1 },
       { intervalMinutes: Number.NaN, idleMinutes: Number.POSITIVE_INFINITY },
     ];
     for (const input of garbage) {
@@ -82,6 +88,7 @@ describe("parseState", () => {
       pausedUntil: 1_700_000_900_000,
       bag: ["li-003", "li-011"],
       lastPackCheckAt: 1_699_999_000_000,
+      deferredRing: true,
     };
     expect(parseState(saved)).toEqual(saved);
   });
@@ -102,7 +109,19 @@ describe("parseState", () => {
 
   it("drops unknown fields", () => {
     const result = parseState({ ...createInitialState(), sneaky: true });
-    expect(Object.keys(result).sort()).toEqual(["bag", "lastPackCheckAt", "pausedUntil", "sessionStartedAt", "version"]);
+    expect(Object.keys(result).sort()).toEqual([
+      "bag",
+      "deferredRing",
+      "lastPackCheckAt",
+      "pausedUntil",
+      "sessionStartedAt",
+      "version",
+    ]);
+  });
+
+  it("treats a missing or invalid deferredRing as false", () => {
+    expect(parseState({ version: 1 }).deferredRing).toBe(false);
+    expect(parseState({ version: 1, deferredRing: "yes" }).deferredRing).toBe(false);
   });
 
   it("copies the bag instead of sharing it", () => {

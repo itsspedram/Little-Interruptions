@@ -11,6 +11,11 @@ describe("defaults", () => {
     expect(createDefaultSettings().soundEnabled).toBe(true);
   });
 
+  it("turns smart pause and the menu bar countdown on by default", () => {
+    expect(createDefaultSettings().smartPause).toBe(true);
+    expect(createDefaultSettings().showCountdown).toBe(true);
+  });
+
   it("starts with no session, no pause, an empty bag and no update check", () => {
     expect(createInitialState()).toEqual({
       version: 1,
@@ -18,6 +23,7 @@ describe("defaults", () => {
       pausedUntil: null,
       bag: [],
       lastPackCheckAt: null,
+      deferredRing: false,
     });
   });
 
