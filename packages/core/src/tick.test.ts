@@ -218,3 +218,82 @@ describe("smart pause", () => {
     expect(result.state.deferredRing).toBe(false);
   });
 });
+
+describe("welcome back", () => {
+  const HOURS = (n: number) => n * HOUR;
+  const seen = (at: number, change: Partial<State> = {}) => ({ ...createInitialState(), lastActiveAt: at, ...change });
+
+  it("welcomes the user after an absence of at least the threshold", () => {
+    const result = onTick({ now: T0 + HOURS(3), idleSeconds: 1, gapMs: 5000 }, settings(), seen(T0));
+    expect(result.welcome).toBe(true);
+    expect(result.state.lastActiveAt).toBe(T0 + HOURS(3));
+    expect(result.state.sessionStartedAt).toBe(T0 + HOURS(3));
+  });
+
+  it("does not welcome after a shorter absence", () => {
+    const result = onTick({ now: T0 + HOURS(3) - 1, idleSeconds: 1, gapMs: 5000 }, settings(), seen(T0));
+    expect(result.welcome).toBe(false);
+  });
+
+  it("waits until the user is really back, not just a tick of the clock", () => {
+    const state = seen(T0);
+    const idle = onTick({ now: T0 + HOURS(5), idleSeconds: 600, gapMs: 5000 }, settings(), state);
+    expect(idle.welcome).toBe(false);
+    expect(idle.state.lastActiveAt).toBe(T0);
+    const back = onTick({ now: T0 + HOURS(5) + 5000, idleSeconds: 1, gapMs: 5000 }, settings(), idle.state);
+    expect(back.welcome).toBe(true);
+  });
+
+  it("greets only once per return", () => {
+    const first = onTick({ now: T0 + HOURS(4), idleSeconds: 1, gapMs: 5000 }, settings(), seen(T0));
+    const second = onTick({ now: T0 + HOURS(4) + 5000, idleSeconds: 1, gapMs: 5000 }, settings(), first.state);
+    expect(first.welcome).toBe(true);
+    expect(second.welcome).toBe(false);
+  });
+
+  it("never welcomes on the very first run", () => {
+    const result = onTick({ now: T0, idleSeconds: 1, gapMs: 0 }, settings(), createInitialState());
+    expect(result.welcome).toBe(false);
+    expect(result.state.lastActiveAt).toBe(T0);
+  });
+
+  it("respects the switch and the custom threshold", () => {
+    const off = onTick({ now: T0 + HOURS(9), idleSeconds: 1, gapMs: 5000 }, settings({ welcomeBack: false }), seen(T0));
+    expect(off.welcome).toBe(false);
+    expect(off.state.lastActiveAt).toBe(T0 + HOURS(9));
+    const custom = onTick({ now: T0 + HOURS(1), idleSeconds: 1, gapMs: 5000 }, settings({ welcomeAfterMinutes: 60 }), seen(T0));
+    expect(custom.welcome).toBe(true);
+  });
+
+  it("never treats an absence shorter than the idle limit as a return", () => {
+    const result = onTick(
+      { now: T0 + 4 * MIN, idleSeconds: 1, gapMs: 5000 },
+      settings({ welcomeAfterMinutes: 1, idleMinutes: 5 }),
+      seen(T0),
+    );
+    expect(result.welcome).toBe(false);
+  });
+
+  it("refreshes last-seen at most once a minute while the user keeps working", () => {
+    const first = onTick({ now: T0, idleSeconds: 1, gapMs: 5000 }, settings(), seen(T0));
+    expect(first.state).toBe(first.state);
+    const soon = onTick({ now: T0 + 30_000, idleSeconds: 1, gapMs: 5000 }, settings(), seen(T0));
+    expect(soon.state.lastActiveAt).toBe(T0);
+    const later = onTick({ now: T0 + 60_000, idleSeconds: 1, gapMs: 5000 }, settings(), seen(T0));
+    expect(later.state.lastActiveAt).toBe(T0 + 60_000);
+  });
+
+  it("recovers when the clock moves backwards", () => {
+    const result = onTick({ now: T0, idleSeconds: 1, gapMs: 5000 }, settings(), seen(T0 + HOURS(10)));
+    expect(result.welcome).toBe(false);
+    expect(result.state.lastActiveAt).toBe(T0);
+  });
+
+  it("does not ring at the moment of a welcome", () => {
+    const state = running(T0, { lastActiveAt: T0, deferredRing: false });
+    // the user left right after T0 and comes back exactly on a slot, 3 hours later
+    const result = onTick({ now: T0 + HOURS(3), idleSeconds: 1, gapMs: 5000 }, settings(), state);
+    expect(result.welcome).toBe(true);
+    expect(result.ring).toBe(false);
+  });
+});

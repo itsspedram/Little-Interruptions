@@ -7,6 +7,9 @@ export const ACTIVE_WITHIN_SECONDS = 15;
 /** A gap between two ticks at least this long means the computer slept. */
 export const SLEEP_GAP_MS = 60_000;
 
+/** How often "last seen" is refreshed while the user keeps working. */
+const LAST_SEEN_STEP_MS = 60_000;
+
 export interface TickInput {
   /** Current time, epoch milliseconds. */
   now: number;
@@ -30,7 +33,11 @@ export interface TickInput {
  * Because a restarted session has its first slot a full interval away, nothing
  * missed during sleep or idle is ever replayed.
  */
-export function onTick(input: TickInput, settings: Settings, state: State): { state: State; ring: boolean } {
+export function onTick(
+  input: TickInput,
+  settings: Settings,
+  state: State,
+): { state: State; ring: boolean; welcome: boolean } {
   const { now, idleSeconds, gapMs } = input;
   let next = state;
 
@@ -43,6 +50,20 @@ export function onTick(input: TickInput, settings: Settings, state: State): { st
     next = startSession(next, now);
   }
 
+  // Welcome back: the user is here again after an absence of at least `welcomeAfterMinutes`
+  // (never shorter than the idle limit, so it always follows a finished session).
+  const present = idleSeconds < ACTIVE_WITHIN_SECONDS;
+  let welcome = false;
+  if (present) {
+    const seenAt = next.lastActiveAt;
+    const away = seenAt === null ? 0 : now - seenAt;
+    const threshold = Math.max(settings.welcomeAfterMinutes, settings.idleMinutes) * 60_000;
+    welcome = settings.welcomeBack && away >= threshold;
+    // Saved at most once a minute so the state file is not rewritten on every tick;
+    // a clock that jumped backwards is simply reset.
+    if (seenAt === null || away < 0 || away >= LAST_SEEN_STEP_MS) next = { ...next, lastActiveAt: now };
+  }
+
   const previousTick = now - Math.max(0, gapMs);
   const due = nextFireTime(previousTick, settings, next);
   const slotPassed = due !== null && due <= now;
@@ -52,8 +73,9 @@ export function onTick(input: TickInput, settings: Settings, state: State): { st
   const wanted = slotPassed || held;
 
   const hold = wanted && settings.smartPause && input.busy === true;
-  const ring = wanted && !hold;
+  // A bell that falls due at the very moment of a welcome is skipped, like any other missed one.
+  const ring = wanted && !hold && !welcome;
 
   if (next.deferredRing !== hold) next = { ...next, deferredRing: hold };
-  return { state: next, ring };
+  return { state: next, ring, welcome };
 }

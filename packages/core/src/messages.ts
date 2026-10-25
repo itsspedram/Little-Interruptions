@@ -1,22 +1,41 @@
+import { WELCOME_CATEGORY } from "./types.ts";
 import type { Message, MessagePack, Settings, State } from "./types.ts";
 
-/**
- * Flatten the enabled packs into one list. Pack order is kept, and when two
- * packs reuse a message id the first one wins.
- */
-export function collectMessages(packs: MessagePack[], settings: Settings): Message[] {
+function collect(packs: MessagePack[], settings: Settings, keep: (message: Message) => boolean): Message[] {
   const enabled = new Set(settings.enabledPacks);
   const seen = new Set<string>();
   const collected: Message[] = [];
   for (const pack of packs) {
     if (!enabled.has(pack.collection)) continue;
     for (const message of pack.messages) {
-      if (seen.has(message.id)) continue;
+      if (seen.has(message.id) || !keep(message)) continue;
       seen.add(message.id);
       collected.push(message);
     }
   }
   return collected;
+}
+
+/**
+ * The regular rotation: messages from the enabled packs, limited to the
+ * categories the user picked. Welcome messages never appear here. Pack order is
+ * kept, and when two packs reuse a message id the first one wins.
+ */
+export function collectMessages(packs: MessagePack[], settings: Settings): Message[] {
+  const categories = new Set(settings.enabledCategories);
+  return collect(packs, settings, (m) => m.category !== WELCOME_CATEGORY && categories.has(m.category));
+}
+
+/** Every welcome-back message from the enabled packs. */
+export function collectWelcomeMessages(packs: MessagePack[], settings: Settings): Message[] {
+  return collect(packs, settings, (m) => m.category === WELCOME_CATEGORY);
+}
+
+/** A random welcome message, or null when there is none (the app then uses its own plain greeting). */
+export function pickWelcome(messages: Message[], random: () => number): Message | null {
+  if (messages.length === 0) return null;
+  const index = Math.min(messages.length - 1, Math.floor(random() * messages.length));
+  return messages[index] ?? null;
 }
 
 /** Fisher-Yates on a copy; `random` returns a number in [0, 1). */

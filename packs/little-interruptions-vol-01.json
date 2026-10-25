@@ -33,6 +33,11 @@
     {"id":"li-027","category":"tiny_mindfulness","text":"Feel the air touching your face."},
     {"id":"li-028","category":"tiny_mindfulness","text":"You don't need to fix this moment. Just notice it."},
     {"id":"li-029","category":"tiny_mindfulness","text":"Take a breath that belongs to nobody else."},
-    {"id":"li-030","category":"tiny_mindfulness","text":"For five seconds, there's nowhere else you need to be."}
+    {"id":"li-030","category":"tiny_mindfulness","text":"For five seconds, there's nowhere else you need to be."},
+    {"id":"li-031","category":"welcome_back","text":"Welcome back. Nothing urgent happened to you while you were gone."},
+    {"id":"li-032","category":"welcome_back","text":"Hi again. Take a breath before you dive in."},
+    {"id":"li-033","category":"welcome_back","text":"You're back. Start slowly, there's no rush."},
+    {"id":"li-034","category":"welcome_back","text":"Good to see you. The work can wait one more breath."},
+    {"id":"li-035","category":"welcome_back","text":"Welcome back. Be gentle with the first hour."}
   ]
 }

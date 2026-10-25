@@ -6,6 +6,7 @@ import {
   nextFireTime,
   pauseUntil,
   resume,
+  skipNext,
   startSession,
 } from "./schedule.ts";
 import type { Settings, State } from "./types.ts";
@@ -145,5 +146,25 @@ describe("isSessionExpired", () => {
 
   it("is true well past the threshold", () => {
     expect(isSessionExpired(T0 + 90 * MIN, T0, s)).toBe(true);
+  });
+});
+
+describe("skipNext", () => {
+  it("skips only the next bell and keeps the grid", () => {
+    const state = sessionAt(T0);
+    const s = settings({ intervalMinutes: 60 });
+    const skipped = skipNext(T0 + 10 * MIN, s, state);
+    expect(nextFireTime(T0 + 10 * MIN, s, skipped)).toBe(T0 + 120 * MIN);
+  });
+
+  it("does nothing without a running session", () => {
+    const state = createInitialState();
+    expect(skipNext(T0, settings(), state)).toBe(state);
+  });
+
+  it("once the skipped time has passed the following bell is the normal one", () => {
+    const s = settings({ intervalMinutes: 60 });
+    const skipped = skipNext(T0 + 10 * MIN, s, sessionAt(T0));
+    expect(nextFireTime(T0 + 61 * MIN, s, skipped)).toBe(T0 + 120 * MIN);
   });
 });
