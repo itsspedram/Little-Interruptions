@@ -155,6 +155,8 @@ body {
 }
 
 /* The popup and the quick panel are transparent windows, so their rounded cards float on the desktop. */
+html[data-view="overlay"],
+html[data-view="overlay"] body,
 html[data-view="popup"],
 html[data-view="popup"] body,
 html[data-view="panel"],

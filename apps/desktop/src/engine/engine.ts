@@ -17,7 +17,7 @@ import {
   trayTitle,
   validateSettings,
 } from "@little-interruptions/core";
-import type { Message, Settings, State, Status } from "@little-interruptions/core";
+import type { DisplayStyle, Message, Settings, State, Status } from "@little-interruptions/core";
 import { PACK_BASE_URL, isUpdateSourceConfigured } from "../config.ts";
 import { loadPacks } from "./packs.ts";
 import type { PackEntry } from "./packs.ts";
@@ -80,12 +80,12 @@ async function fetchJson(url: string): Promise<unknown> {
   }
 }
 
-async function showBell(message: Message, sound: boolean): Promise<void> {
+async function showBell(message: Message, sound: boolean, style: DisplayStyle): Promise<void> {
   if (!isNative()) {
     console.info("[bell]", message.text);
     return;
   }
-  await invoke("show_popup", { id: message.id, category: message.category, text: message.text, sound });
+  await invoke("show_popup", { id: message.id, category: message.category, text: message.text, sound, style });
 }
 
 /**
@@ -198,7 +198,7 @@ class Engine {
     this.state = picked.state;
     storage.saveState(this.state);
     this.commit();
-    await showBell(picked.message, this.settings.soundEnabled);
+    await showBell(picked.message, this.settings.soundEnabled, this.settings.displayStyle);
   }
 
   /** Greet the user after a long absence: a welcome message if the packs have one, a plain greeting if not. */
@@ -212,7 +212,7 @@ class Engine {
       category: "welcome_back",
       text: "Welcome back.",
     };
-    await showBell(message, false);
+    await showBell(message, false, this.settings.displayStyle);
   }
 
   /** Download new messages now, whether or not a daily check is due. */

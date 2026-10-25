@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { engine } from "../engine/engine.ts";
 import { useEngine } from "../engine/useEngine.ts";
 import { BellIcon, Button, Toggle } from "../ui/controls.tsx";
-import { IntervalPicker, KindPicker } from "../ui/fields.tsx";
+import { IntervalPicker, KindPicker, StylePicker } from "../ui/fields.tsx";
 
 const STEPS = 3;
 
@@ -58,6 +58,7 @@ export function Onboarding() {
 
         {step === 2 ? (
           <Step key="behaviour" title="How should it behave?" lead="Gentle defaults. Try the bell to hear it.">
+            <StylePicker style={settings.displayStyle} />
             <Toggle
               label="Play the bell sound"
               checked={settings.soundEnabled}

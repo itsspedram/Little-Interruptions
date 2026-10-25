@@ -16,8 +16,9 @@ use tauri::{
     image::Image,
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    AppHandle, Emitter, Manager, PhysicalPosition, Rect, WebviewWindow, WindowEvent,
+    AppHandle, Emitter, Manager, PhysicalPosition, PhysicalSize, Rect, WebviewWindow, WindowEvent,
 };
+use tauri_plugin_notification::NotificationExt;
 
 /// How often the heartbeat reaches the engine living in the hidden settings window.
 const TICK_EVERY: Duration = Duration::from_secs(5);
@@ -82,7 +83,8 @@ fn place_popup(popup: &WebviewWindow) {
     let _ = popup.set_position(PhysicalPosition::new(x as i32, y as i32));
 }
 
-/// Shows the message in the popup and, if asked, rings the bell.
+/// Shows the message the way the user chose ("card", "overlay" or "notification")
+/// and, if asked, rings the bell. A style that cannot be shown falls back to the card.
 #[tauri::command]
 fn show_popup(
     app: AppHandle,
@@ -90,18 +92,64 @@ fn show_popup(
     category: String,
     text: String,
     sound: bool,
+    style: String,
 ) -> Result<(), String> {
+    let payload = BellPayload { id, category, text };
+    let shown = match style.as_str() {
+        "overlay" => show_overlay(&app, &payload),
+        "notification" => show_notification(&app, &payload),
+        _ => Err("card".to_string()),
+    };
+    if shown.is_err() {
+        show_card(&app, payload)?;
+    }
+    if sound {
+        sound::play_bell();
+    }
+    Ok(())
+}
+
+fn show_card(app: &AppHandle, payload: BellPayload) -> Result<(), String> {
     let popup = app
         .get_webview_window("popup")
         .ok_or_else(|| "the popup window is missing".to_string())?;
     place_popup(&popup);
     popup.show().map_err(|error| error.to_string())?;
-    app.emit_to("popup", "bell", BellPayload { id, category, text })
+    app.emit_to("popup", "bell", payload)
+        .map_err(|error| error.to_string())
+}
+
+/// A translucent layer over the whole primary screen; a click or Esc dismisses it.
+fn show_overlay(app: &AppHandle, payload: &BellPayload) -> Result<(), String> {
+    let overlay = app
+        .get_webview_window("overlay")
+        .ok_or_else(|| "the overlay window is missing".to_string())?;
+    let monitor = overlay
+        .primary_monitor()
+        .map_err(|error| error.to_string())?
+        .ok_or_else(|| "no monitor".to_string())?;
+    let origin = monitor.position();
+    let size = monitor.size();
+    overlay
+        .set_position(PhysicalPosition::new(origin.x, origin.y))
         .map_err(|error| error.to_string())?;
-    if sound {
-        sound::play_bell();
-    }
-    Ok(())
+    overlay
+        .set_size(PhysicalSize::new(size.width, size.height))
+        .map_err(|error| error.to_string())?;
+    overlay.show().map_err(|error| error.to_string())?;
+    // Focus lets Esc work; it also moves focus away from whatever the user was typing in.
+    let _ = overlay.set_focus();
+    app.emit_to("overlay", "bell", payload.clone())
+        .map_err(|error| error.to_string())
+}
+
+fn show_notification(app: &AppHandle, payload: &BellPayload) -> Result<(), String> {
+    app.notification()
+        .builder()
+        .title("Little Interruptions")
+        .body(payload.text.as_str())
+        .show()
+        .map_err(|error| error.to_string())
 }
 
 /// Updates the text next to the menu bar icon and the hover tooltip.
@@ -137,6 +185,13 @@ fn panel_action(app: AppHandle, id: String) {
         other => {
             let _ = app.emit_to("main", "menu", other.to_string());
         }
+    }
+}
+
+#[tauri::command]
+fn hide_overlay(app: AppHandle) {
+    if let Some(overlay) = app.get_webview_window("overlay") {
+        let _ = overlay.hide();
     }
 }
 
@@ -300,9 +355,11 @@ fn start_ticker(app: AppHandle) {
 
 fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_notification::init())
         .invoke_handler(tauri::generate_handler![
             show_popup,
             hide_popup,
+            hide_overlay,
             set_tray_status,
             panel_action,
             open_settings
