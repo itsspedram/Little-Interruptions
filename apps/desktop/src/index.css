@@ -1,9 +1,10 @@
 @import "tailwindcss";
 
 /*
- * Two themes, picked by the system appearance:
- *   light = "Morning Mist" (sage, white cards, teal, a little peach at the bell)
- *   dark  = "Dusk Ink"     (evening navy, moonlight text, lavender, warm bell glow)
+ * "Morning Mist", in two versions picked by the system appearance:
+ *   light: sage ground, white cards, deep teal, a little peach at the bell
+ *   dark:  pine green-black, misty sage text, soft mint, the same peach glow
+ * Both share the round, pill-shaped controls.
  * Components only use the semantic names below (bg-surface, text-ink, …), never raw colors.
  */
 @theme {
@@ -26,7 +27,7 @@
   --color-toggle-off: #d5e1da;
   --color-knob: #ffffff;
 
-  --radius-card: 26px;
+  --radius-card: 28px;
   --radius-ctl: 999px;
   --radius-thumb: 999px;
 
@@ -117,28 +118,24 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-ground: #0e1020;
-    --color-surface: #1a1d2e;
+    --color-ground: #0f1714;
+    --color-surface: #17211d;
     --color-line: rgb(255 255 255 / 0.08);
-    --color-soft: #252945;
-    --color-well: #12142a;
-    --color-thumb: #2f3459;
-    --color-ink: #eceaf6;
-    --color-muted: #a6a9c4;
-    --color-accent: #a5b4ff;
-    --color-on-accent: #12142a;
-    --color-fill-from: #8e9cff;
-    --color-fill-to: #c3cbff;
-    --color-track: #262a45;
-    --color-chip: #252945;
-    --color-chip-ink: #ffd9a8;
-    --color-glow: #ffd9a8;
-    --color-toggle-off: #2f3459;
+    --color-soft: #22302a;
+    --color-well: #121b17;
+    --color-thumb: #2c3c35;
+    --color-ink: #e6efea;
+    --color-muted: #9db2a9;
+    --color-accent: #6fcfb2;
+    --color-on-accent: #0b1f19;
+    --color-fill-from: #3e9c83;
+    --color-fill-to: #9be3cc;
+    --color-track: #23312b;
+    --color-chip: #3a2a20;
+    --color-chip-ink: #f6c9a8;
+    --color-glow: #f0b488;
+    --color-toggle-off: #2c3c35;
     --color-knob: #ffffff;
-
-    --radius-card: 22px;
-    --radius-ctl: 13px;
-    --radius-thumb: 10px;
 
     --shadow-card: 0 10px 24px -8px rgb(0 0 0 / 0.6);
     --shadow-thumb: none;
