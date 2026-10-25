@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { INTERVAL_PRESETS } from "@little-interruptions/core";
 import { engine } from "../engine/engine.ts";
+import type { DisplayStyle } from "@little-interruptions/core";
 import { Segmented } from "./controls.tsx";
+import type { SegmentOption } from "./controls.tsx";
 import { KIND_LABELS } from "./describe.ts";
 
 /** A whole-number-of-minutes field that applies on blur or Enter and explains itself when wrong. */
@@ -134,6 +136,33 @@ export function KindPicker({ enabled }: { enabled: readonly string[] }) {
           onToggle={(next) => engine.setCategoryEnabled(category, next)}
         />
       ))}
+    </div>
+  );
+}
+
+const STYLE_OPTIONS: readonly SegmentOption<DisplayStyle>[] = [
+  { value: "card", label: "Card" },
+  { value: "overlay", label: "Overlay" },
+  { value: "notification", label: "Notification" },
+];
+
+export const STYLE_HINTS: Record<DisplayStyle, string> = {
+  card: "A small card in the corner of the screen.",
+  overlay: "A soft, translucent layer over the screen. Click or press Esc to close it.",
+  notification: "A normal system notification. It respects Do Not Disturb.",
+};
+
+/** How a bell is shown, with a line explaining the chosen way. */
+export function StylePicker({ style }: { style: DisplayStyle }) {
+  return (
+    <div className="space-y-2">
+      <Segmented<DisplayStyle>
+        label="How the bell appears"
+        options={STYLE_OPTIONS}
+        value={style}
+        onChange={(next) => engine.updateSettings({ displayStyle: next })}
+      />
+      <p className="text-xs text-muted">{STYLE_HINTS[style]}</p>
     </div>
   );
 }

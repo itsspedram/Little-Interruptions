@@ -5,7 +5,7 @@ import type { Snapshot } from "../engine/engine.ts";
 import { useEngine } from "../engine/useEngine.ts";
 import { BellIcon, Button, Progress, Segmented, Toggle } from "../ui/controls.tsx";
 import { describeStatus } from "../ui/describe.ts";
-import { IntervalPicker, KindPicker, MinutesField } from "../ui/fields.tsx";
+import { IntervalPicker, KindPicker, MinutesField, StylePicker } from "../ui/fields.tsx";
 
 function formatChecked(timestamp: number | null, now: number): string {
   if (timestamp === null) return "never";
@@ -115,7 +115,12 @@ export function SettingsView() {
           />
         </Card>
 
-        <Card title="Messages" order={2}>
+        <Card title="How it appears" order={2}>
+          <StylePicker style={settings.displayStyle} />
+          <Button onClick={() => void engine.ring()}>Preview</Button>
+        </Card>
+
+        <Card title="Messages" order={3}>
           <KindPicker enabled={settings.enabledCategories} />
           <ul className="space-y-2">
             {snapshot.packs.map((pack) => (

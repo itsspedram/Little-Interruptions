@@ -38,6 +38,20 @@
         "visible": false
       },
       {
+        "label": "overlay",
+        "title": "Little Interruptions",
+        "url": "index.html?view=overlay",
+        "width": 800,
+        "height": 600,
+        "resizable": false,
+        "decorations": false,
+        "transparent": true,
+        "shadow": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "visible": false
+      },
+      {
         "label": "panel",
         "title": "Little Interruptions",
         "url": "index.html?view=panel",
