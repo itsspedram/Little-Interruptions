@@ -51,3 +51,10 @@ export function nextFireTime(now: number, settings: Settings, state: State): num
 export function isSessionExpired(now: number, lastActivityAt: number, settings: Settings): boolean {
   return now - lastActivityAt >= settings.idleMinutes * MS_PER_MINUTE;
 }
+
+/** Skip the next bell only: stay quiet until just past it, then carry on with the normal grid. */
+export function skipNext(now: number, settings: Settings, state: State): State {
+  const next = nextFireTime(now, settings, state);
+  if (next === null) return state;
+  return { ...state, pausedUntil: next + 1 };
+}

@@ -16,6 +16,15 @@ describe("defaults", () => {
     expect(createDefaultSettings().showCountdown).toBe(true);
   });
 
+  it("shows all regular message kinds, the card style and a welcome after 3 hours by default", () => {
+    const settings = createDefaultSettings();
+    expect(settings.enabledCategories).toEqual(["gentle_caring", "playful_weird", "tiny_mindfulness"]);
+    expect(settings.displayStyle).toBe("card");
+    expect(settings.welcomeBack).toBe(true);
+    expect(settings.welcomeAfterMinutes).toBe(180);
+    expect(settings.onboarded).toBe(false);
+  });
+
   it("starts with no session, no pause, an empty bag and no update check", () => {
     expect(createInitialState()).toEqual({
       version: 1,
@@ -24,6 +33,7 @@ describe("defaults", () => {
       bag: [],
       lastPackCheckAt: null,
       deferredRing: false,
+      lastActiveAt: null,
     });
   });
 

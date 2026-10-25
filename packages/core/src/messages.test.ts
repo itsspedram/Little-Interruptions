@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createDefaultSettings, createInitialState } from "./defaults.ts";
-import { collectMessages, pickMessage } from "./messages.ts";
+import { collectMessages, collectWelcomeMessages, pickMessage, pickWelcome } from "./messages.ts";
 import { makeRandom } from "./test-utils.ts";
 import type { Message, MessagePack, State } from "./types.ts";
 
@@ -135,5 +135,48 @@ describe("pickMessage", () => {
     }
     expect(new Set(secondRound).size).toBe(4);
     expect(secondRound).toContain("d");
+  });
+});
+
+describe("message kinds", () => {
+  const mixed: MessagePack = {
+    collection: "Mixed",
+    version: "0.1.0",
+    locale: "en",
+    status: "draft",
+    messages: [
+      { id: "g1", category: "gentle_caring", text: "g" },
+      { id: "p1", category: "playful_weird", text: "p" },
+      { id: "t1", category: "tiny_mindfulness", text: "t" },
+      { id: "w1", category: "welcome_back", text: "w" },
+    ],
+  };
+  const only = (enabledCategories: string[]) => ({
+    ...createDefaultSettings(),
+    enabledPacks: ["Mixed"],
+    enabledCategories,
+  });
+
+  it("keeps only the kinds the user picked", () => {
+    expect(collectMessages([mixed], only(["playful_weird"])).map((m) => m.id)).toEqual(["p1"]);
+    expect(collectMessages([mixed], only(["gentle_caring", "tiny_mindfulness"])).map((m) => m.id)).toEqual(["g1", "t1"]);
+  });
+
+  it("never puts welcome messages in the regular rotation", () => {
+    const ids = collectMessages([mixed], only(["gentle_caring", "playful_weird", "tiny_mindfulness"])).map((m) => m.id);
+    expect(ids).not.toContain("w1");
+    expect(collectMessages([mixed], only(["welcome_back"]))).toEqual([]);
+  });
+
+  it("collects welcome messages only from enabled packs", () => {
+    expect(collectWelcomeMessages([mixed], only(["gentle_caring"])).map((m) => m.id)).toEqual(["w1"]);
+    expect(collectWelcomeMessages([mixed], { ...only([]), enabledPacks: ["Other"] })).toEqual([]);
+  });
+
+  it("picks a welcome message at random, or none when there are none", () => {
+    const list: Message[] = [msg("a"), msg("b"), msg("c")];
+    expect(pickWelcome(list, () => 0)?.id).toBe("a");
+    expect(pickWelcome(list, () => 0.99)?.id).toBe("c");
+    expect(pickWelcome([], () => 0.5)).toBeNull();
   });
 });
