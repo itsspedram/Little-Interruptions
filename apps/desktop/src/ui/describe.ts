@@ -23,3 +23,10 @@ export function describeStatus(status: Status): { title: string; detail: string 
       return { title: "Resting", detail: "The bell starts counting when you're back at the keyboard." };
   }
 }
+
+/** Names the user sees for the kinds of message. */
+export const KIND_LABELS: Record<string, { label: string; hint: string }> = {
+  gentle_caring: { label: "Gentle", hint: "Soft, kind check-ins" },
+  playful_weird: { label: "Playful", hint: "Small, silly surprises" },
+  tiny_mindfulness: { label: "Mindful", hint: "Tiny moments of attention" },
+};

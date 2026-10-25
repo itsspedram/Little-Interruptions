@@ -34,11 +34,11 @@ async function bootstrap(): Promise<void> {
   }
 
   const { engine } = await import("./engine/engine.ts");
-  const { SettingsView } = await import("./views/Settings.tsx");
+  const { App } = await import("./views/App.tsx");
   engine.start();
   root.render(
     <StrictMode>
-      <SettingsView />
+      <App />
     </StrictMode>,
   );
 }

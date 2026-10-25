@@ -2,14 +2,17 @@ import { invoke } from "@tauri-apps/api/core";
 import { emit, listen } from "@tauri-apps/api/event";
 import {
   collectMessages,
+  collectWelcomeMessages,
   endSession,
   getStatus,
   mergePack,
   onTick,
   pauseUntil,
   pickMessage,
+  pickWelcome,
   recordPackCheck,
   resume,
+  skipNext,
   shouldCheckForUpdates,
   trayTitle,
   validateSettings,
@@ -123,6 +126,7 @@ class Engine {
     this.started = true;
 
     if (isNative()) {
+      if (!this.settings.onboarded) void invoke("open_settings");
       void listen<TickPayload>("tick", (event) => this.handleTick(event.payload));
       void listen<string>("menu", (event) => this.handleMenu(event.payload));
       return;
@@ -148,6 +152,14 @@ class Engine {
     return [];
   }
 
+  /** Switch a kind of message on or off. At least one kind must stay on. */
+  setCategoryEnabled(category: string, enabled: boolean): boolean {
+    const others = this.settings.enabledCategories.filter((name) => name !== category);
+    const next = enabled ? [...others, category] : others;
+    if (next.length === 0) return false;
+    return this.updateSettings({ enabledCategories: next }).length === 0;
+  }
+
   /** Switch a pack on or off. At least one pack must stay on. */
   setPackEnabled(collection: string, enabled: boolean): boolean {
     const others = this.settings.enabledPacks.filter((name) => name !== collection);
@@ -158,6 +170,13 @@ class Engine {
 
   pauseFor(minutes: number): void {
     this.state = pauseUntil(this.state, Date.now() + minutes * 60_000);
+    storage.saveState(this.state);
+    this.commit();
+  }
+
+  /** Skip only the next bell. */
+  skipNextBell(): void {
+    this.state = skipNext(Date.now(), this.settings, this.state);
     storage.saveState(this.state);
     this.commit();
   }
@@ -180,6 +199,20 @@ class Engine {
     storage.saveState(this.state);
     this.commit();
     await showBell(picked.message, this.settings.soundEnabled);
+  }
+
+  /** Greet the user after a long absence: a welcome message if the packs have one, a plain greeting if not. */
+  private async welcome(): Promise<void> {
+    const pool = collectWelcomeMessages(
+      this.packs.map((entry) => entry.pack),
+      this.settings,
+    );
+    const message = pickWelcome(pool, Math.random) ?? {
+      id: "welcome-plain",
+      category: "welcome_back",
+      text: "Welcome back.",
+    };
+    await showBell(message, false);
   }
 
   /** Download new messages now, whether or not a daily check is due. */
@@ -248,7 +281,11 @@ class Engine {
       this.state = result.state;
       storage.saveState(this.state);
     }
-    if (result.ring) void this.ring();
+    // Until the first-run setup is finished nothing rings; the user hasn't chosen how yet.
+    if (this.settings.onboarded) {
+      if (result.welcome) void this.welcome();
+      else if (result.ring) void this.ring();
+    }
     this.maybeCheckForUpdates(payload.now);
     this.commit(payload.now);
   }

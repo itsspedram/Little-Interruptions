@@ -117,6 +117,12 @@ fn set_tray_status(app: AppHandle, title: String, tooltip: String) {
     }
 }
 
+/// Lets the first-run setup bring the settings window to the front on its own.
+#[tauri::command]
+fn open_settings(app: AppHandle) {
+    show_settings(&app);
+}
+
 /// Buttons in the quick panel. Most are handled by the engine; a few need the shell.
 #[tauri::command]
 fn panel_action(app: AppHandle, id: String) {
@@ -298,7 +304,8 @@ fn main() {
             show_popup,
             hide_popup,
             set_tray_status,
-            panel_action
+            panel_action,
+            open_settings
         ])
         .on_window_event(|window, event| match event {
             // Closing the settings window only hides it; the app lives in the tray.
