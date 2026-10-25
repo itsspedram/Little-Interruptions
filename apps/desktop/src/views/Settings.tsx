@@ -1,12 +1,11 @@
-import { useEffect, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
-import { INTERVAL_PRESETS } from "@little-interruptions/core";
 import { APP_VERSION, isUpdateSourceConfigured } from "../config.ts";
 import { engine } from "../engine/engine.ts";
 import type { Snapshot } from "../engine/engine.ts";
 import { useEngine } from "../engine/useEngine.ts";
 import { BellIcon, Button, Progress, Segmented, Toggle } from "../ui/controls.tsx";
 import { describeStatus } from "../ui/describe.ts";
+import { IntervalPicker, KindPicker, MinutesField } from "../ui/fields.tsx";
 
 function formatChecked(timestamp: number | null, now: number): string {
   if (timestamp === null) return "never";
@@ -27,96 +26,6 @@ function Card({ title, order, children }: { title: string; order: number; childr
       <h2 className="mb-3 text-[11px] font-semibold tracking-[0.14em] text-muted uppercase">{title}</h2>
       <div className="space-y-4">{children}</div>
     </section>
-  );
-}
-
-/** A whole-number-of-minutes field that applies on blur or Enter and explains itself when wrong. */
-function MinutesField({
-  label,
-  hint,
-  value,
-  onCommit,
-}: {
-  label: string;
-  hint?: string;
-  value: number;
-  onCommit: (minutes: number) => string[];
-}) {
-  const [draft, setDraft] = useState(String(value));
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    setDraft(String(value));
-    setError(null);
-  }, [value]);
-
-  const commit = () => {
-    const problems = onCommit(Number(draft));
-    setError(problems.length > 0 ? "Enter a whole number of minutes from 1 to 1440." : null);
-  };
-
-  return (
-    <label className="flex items-center justify-between gap-4">
-      <span>
-        <span className="block text-sm font-medium text-ink">{label}</span>
-        {hint ? <span className="mt-0.5 block text-xs text-muted">{hint}</span> : null}
-        {error ? <span className="mt-0.5 block text-xs text-red-600 dark:text-red-300">{error}</span> : null}
-      </span>
-      <input
-        type="number"
-        inputMode="numeric"
-        min={1}
-        max={1440}
-        value={draft}
-        onChange={(event) => setDraft(event.target.value)}
-        onBlur={commit}
-        onKeyDown={(event) => {
-          if (event.key === "Enter") event.currentTarget.blur();
-        }}
-        className="w-20 rounded-ctl border border-line bg-well px-3 py-1.5 text-right text-sm text-ink tabular-nums transition-shadow outline-none focus:ring-2 focus:ring-accent/50"
-      />
-    </label>
-  );
-}
-
-type IntervalChoice = number | "custom";
-
-const INTERVAL_OPTIONS: { value: IntervalChoice; label: string }[] = [
-  ...INTERVAL_PRESETS.map((minutes) => ({ value: minutes, label: minutes === 90 ? "1.5 hours" : `${minutes / 60} hour${minutes > 60 ? "s" : ""}` })),
-  { value: "custom", label: "Custom" },
-];
-
-function IntervalPicker({ minutes }: { minutes: number }) {
-  const isPreset = (INTERVAL_PRESETS as readonly number[]).includes(minutes);
-  const [customChosen, setCustomChosen] = useState(!isPreset);
-  const showCustom = customChosen || !isPreset;
-
-  return (
-    <div className="space-y-4">
-      <Segmented<IntervalChoice>
-        label="Interval"
-        options={INTERVAL_OPTIONS}
-        value={showCustom ? "custom" : minutes}
-        onChange={(choice) => {
-          if (choice === "custom") {
-            setCustomChosen(true);
-            return;
-          }
-          setCustomChosen(false);
-          engine.updateSettings({ intervalMinutes: choice });
-        }}
-      />
-      {showCustom ? (
-        <div className="animate-rise motion-reduce:animate-none">
-          <MinutesField
-            label="Every"
-            hint="minutes"
-            value={minutes}
-            onCommit={(value) => engine.updateSettings({ intervalMinutes: value })}
-          />
-        </div>
-      ) : null}
-    </div>
   );
 }
 
@@ -169,6 +78,9 @@ export function SettingsView() {
               <Button onClick={() => engine.resumeNow()}>Back to normal</Button>
             ) : (
               <>
+                <Button onClick={() => engine.skipNextBell()} disabled={!running}>
+                  Skip next
+                </Button>
                 <Button onClick={() => engine.pauseFor(60)}>Quiet for 1 hour</Button>
                 <Button onClick={() => engine.pauseFor(180)}>3 hours</Button>
               </>
@@ -204,6 +116,7 @@ export function SettingsView() {
         </Card>
 
         <Card title="Messages" order={2}>
+          <KindPicker enabled={settings.enabledCategories} />
           <ul className="space-y-2">
             {snapshot.packs.map((pack) => (
               <li key={pack.collection}>
@@ -222,6 +135,22 @@ export function SettingsView() {
               </li>
             ))}
           </ul>
+          <Toggle
+            label="Say hello when I'm back"
+            hint="One short welcome after a long break away from the computer."
+            checked={settings.welcomeBack}
+            onChange={(next) => engine.updateSettings({ welcomeBack: next })}
+          />
+          {settings.welcomeBack ? (
+            <div className="animate-rise motion-reduce:animate-none">
+              <MinutesField
+                label="A long break is"
+                hint="minutes away"
+                value={settings.welcomeAfterMinutes}
+                onCommit={(value) => engine.updateSettings({ welcomeAfterMinutes: value })}
+              />
+            </div>
+          ) : null}
           <Toggle
             label="Get new messages automatically"
             hint="Once a day, from GitHub. Nothing about you is sent."
