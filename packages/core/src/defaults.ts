@@ -12,6 +12,7 @@ export function createDefaultSettings(): Settings {
     autoUpdatePacks: true,
     soundEnabled: true,
     smartPause: true,
+    smartPauseMic: true,
     showCountdown: true,
     enabledCategories: [...REGULAR_CATEGORIES],
     displayStyle: "card",

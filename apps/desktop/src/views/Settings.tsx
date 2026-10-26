@@ -107,6 +107,14 @@ export function SettingsView() {
             checked={settings.smartPause}
             onChange={(next) => engine.updateSettings({ smartPause: next })}
           />
+          {settings.smartPause ? (
+            <Toggle
+              label="Also wait when my microphone is on"
+              hint="Catches most calls and recordings. A headset can count while it only plays sound. macOS only."
+              checked={settings.smartPauseMic}
+              onChange={(next) => engine.updateSettings({ smartPauseMic: next })}
+            />
+          ) : null}
           <Toggle
             label="Show time left in the menu bar"
             hint="A small countdown next to the bell icon. macOS only."

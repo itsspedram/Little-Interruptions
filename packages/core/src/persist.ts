@@ -27,6 +27,7 @@ export function parseSettings(input: unknown): Settings {
     autoUpdatePacks,
     soundEnabled,
     smartPause,
+    smartPauseMic,
     showCountdown,
     enabledCategories,
     displayStyle,
@@ -45,6 +46,7 @@ export function parseSettings(input: unknown): Settings {
     autoUpdatePacks: typeof autoUpdatePacks === "boolean" ? autoUpdatePacks : defaults.autoUpdatePacks,
     soundEnabled: typeof soundEnabled === "boolean" ? soundEnabled : defaults.soundEnabled,
     smartPause: typeof smartPause === "boolean" ? smartPause : defaults.smartPause,
+    smartPauseMic: typeof smartPauseMic === "boolean" ? smartPauseMic : defaults.smartPauseMic,
     showCountdown: typeof showCountdown === "boolean" ? showCountdown : defaults.showCountdown,
     enabledCategories: knownCategories.length > 0 ? knownCategories : defaults.enabledCategories,
     displayStyle: (DISPLAY_STYLES as readonly unknown[]).includes(displayStyle)

@@ -20,6 +20,7 @@ describe("parseSettings", () => {
       autoUpdatePacks: false,
       soundEnabled: false,
       smartPause: false,
+      smartPauseMic: false,
       showCountdown: false,
       enabledCategories: ["playful_weird"],
       displayStyle: "overlay",
@@ -28,6 +29,12 @@ describe("parseSettings", () => {
       onboarded: true,
     };
     expect(parseSettings(saved)).toEqual(saved);
+  });
+
+  it("keeps a saved microphone choice and defaults a missing or invalid one to on", () => {
+    expect(parseSettings({ smartPauseMic: false }).smartPauseMic).toBe(false);
+    expect(parseSettings({}).smartPauseMic).toBe(true);
+    expect(parseSettings({ smartPauseMic: "no" }).smartPauseMic).toBe(true);
   });
 
   it("falls back to all kinds when no known message kind is saved", () => {
@@ -75,6 +82,7 @@ describe("parseSettings", () => {
       "onboarded",
       "showCountdown",
       "smartPause",
+      "smartPauseMic",
       "soundEnabled",
       "version",
       "welcomeAfterMinutes",
