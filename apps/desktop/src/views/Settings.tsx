@@ -116,6 +116,12 @@ export function SettingsView() {
             />
           ) : null}
           <Toggle
+            label="Open at login"
+            hint="Starts quietly in the menu bar when you log in."
+            checked={settings.launchAtLogin}
+            onChange={(next) => engine.updateSettings({ launchAtLogin: next })}
+          />
+          <Toggle
             label="Show time left in the menu bar"
             hint="A small countdown next to the bell icon. macOS only."
             checked={settings.showCountdown}

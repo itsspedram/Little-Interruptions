@@ -71,6 +71,12 @@ export function Onboarding() {
               onChange={(next) => engine.updateSettings({ smartPause: next })}
             />
             <Toggle
+              label="Open at login"
+              hint="Starts quietly in the menu bar."
+              checked={settings.launchAtLogin}
+              onChange={(next) => engine.updateSettings({ launchAtLogin: next })}
+            />
+            <Toggle
               label="Show time left in the menu bar"
               checked={settings.showCountdown}
               onChange={(next) => engine.updateSettings({ showCountdown: next })}

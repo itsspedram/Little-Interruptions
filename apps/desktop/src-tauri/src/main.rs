@@ -19,6 +19,7 @@ use tauri::{
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     AppHandle, Emitter, Manager, PhysicalPosition, PhysicalSize, Rect, WebviewWindow, WindowEvent,
 };
+use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
 use tauri_plugin_notification::NotificationExt;
 
 /// How often the heartbeat reaches the engine living in the hidden settings window.
@@ -165,6 +166,23 @@ fn set_tray_status(app: AppHandle, title: String, tooltip: String) {
         });
         let _ = tray.set_tooltip(Some(tooltip.as_str()));
     }
+}
+
+/// Registers or removes the app as a login item so it matches the user's choice.
+/// Debug builds leave the system alone: they would register the development binary.
+#[tauri::command]
+fn set_launch_at_login(app: AppHandle, enabled: bool) -> Result<(), String> {
+    if cfg!(debug_assertions) {
+        return Ok(());
+    }
+    let launcher = app.autolaunch();
+    let registered = launcher.is_enabled().map_err(|error| error.to_string())?;
+    if enabled && !registered {
+        launcher.enable().map_err(|error| error.to_string())?;
+    } else if !enabled && registered {
+        launcher.disable().map_err(|error| error.to_string())?;
+    }
+    Ok(())
 }
 
 /// Lets the first-run setup bring the settings window to the front on its own.
@@ -360,13 +378,18 @@ fn start_ticker(app: AppHandle) {
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_autostart::init(
+            MacosLauncher::LaunchAgent,
+            None,
+        ))
         .invoke_handler(tauri::generate_handler![
             show_popup,
             hide_popup,
             hide_overlay,
             set_tray_status,
             panel_action,
-            open_settings
+            open_settings,
+            set_launch_at_login
         ])
         .on_window_event(|window, event| match event {
             // Closing the settings window only hides it; the app lives in the tray.

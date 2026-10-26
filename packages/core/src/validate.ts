@@ -142,6 +142,9 @@ export function validateSettings(input: unknown): string[] {
   if (typeof input.smartPauseMic !== "boolean") {
     problems.push("smartPauseMic must be true or false");
   }
+  if (typeof input.launchAtLogin !== "boolean") {
+    problems.push("launchAtLogin must be true or false");
+  }
   if (typeof input.showCountdown !== "boolean") {
     problems.push("showCountdown must be true or false");
   }
