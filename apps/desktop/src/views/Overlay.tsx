@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
+import { emit, listen } from "@tauri-apps/api/event";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BellIcon } from "../ui/controls.tsx";
 
@@ -12,6 +12,8 @@ interface BellPayload {
 const VISIBLE_FOR_MS = 20_000;
 /** Matches the fade-out below, so the window hides only once the layer is gone. */
 const EXIT_MS = 320;
+/** Sent when the user closes one overlay, so the one on every screen fades out together. */
+const DISMISS_EVENT = "overlay-dismiss";
 
 const PREVIEW: BellPayload = {
   id: "preview",
@@ -30,7 +32,8 @@ export function Overlay() {
   const [ringCount, setRingCount] = useState(0);
   const hideTimer = useRef<number | undefined>(undefined);
 
-  const dismiss = useCallback(() => {
+  /** Fade this overlay out and hide the windows once it is gone. */
+  const fadeOut = useCallback(() => {
     window.clearTimeout(hideTimer.current);
     setShown(false);
     window.setTimeout(() => {
@@ -38,29 +41,46 @@ export function Overlay() {
     }, EXIT_MS);
   }, []);
 
-  useEffect(() => {
-    if (!isNative()) return;
-    let unlisten: (() => void) | undefined;
-    let cancelled = false;
+  /** The user closed this overlay: tell all of them. */
+  const dismiss = useCallback(() => {
+    if (isNative()) void emit(DISMISS_EVENT);
+    else fadeOut();
+  }, [fadeOut]);
 
-    void listen<BellPayload>("bell", (event) => {
+  const present = useCallback(
+    (payload: BellPayload) => {
       window.clearTimeout(hideTimer.current);
       setShown(false);
-      setBell(event.payload);
+      setBell(payload);
       setRingCount((count) => count + 1);
       window.requestAnimationFrame(() => window.requestAnimationFrame(() => setShown(true)));
-      hideTimer.current = window.setTimeout(dismiss, VISIBLE_FOR_MS);
-    }).then((stop) => {
+      hideTimer.current = window.setTimeout(fadeOut, VISIBLE_FOR_MS);
+    },
+    [fadeOut],
+  );
+
+  useEffect(() => {
+    if (!isNative()) return;
+    const stops: (() => void)[] = [];
+    let cancelled = false;
+    const keep = (stop: () => void) => {
       if (cancelled) stop();
-      else unlisten = stop;
+      else stops.push(stop);
+    };
+
+    void listen<BellPayload>("bell", (event) => present(event.payload)).then(keep);
+    void listen(DISMISS_EVENT, () => fadeOut()).then(keep);
+    // A window created just for this bell was not listening in time; it asks for its bell instead.
+    void invoke<BellPayload | null>("take_pending_bell").then((pending) => {
+      if (pending !== null && !cancelled) present(pending);
     });
 
     return () => {
       cancelled = true;
-      unlisten?.();
+      for (const stop of stops) stop();
       window.clearTimeout(hideTimer.current);
     };
-  }, [dismiss]);
+  }, [present, fadeOut]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {

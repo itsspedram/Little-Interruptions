@@ -7,7 +7,11 @@ mod mic;
 mod sound;
 
 use std::{
-    sync::atomic::{AtomicU64, Ordering},
+    collections::HashMap,
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        Mutex,
+    },
     thread,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
@@ -17,7 +21,8 @@ use tauri::{
     image::Image,
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    AppHandle, Emitter, Manager, PhysicalPosition, PhysicalSize, Rect, WebviewWindow, WindowEvent,
+    AppHandle, Emitter, Manager, PhysicalPosition, PhysicalSize, Rect, State, WebviewUrl,
+    WebviewWindow, WebviewWindowBuilder, WindowEvent,
 };
 use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
 use tauri_plugin_notification::NotificationExt;
@@ -52,6 +57,14 @@ struct TickPayload {
     busy: bool,
     mic_in_use: bool,
 }
+
+/// Overlay windows that were just told to show a bell. A window created a moment ago may not be
+/// listening yet, so it asks for its bell when it starts (see `take_pending_bell`).
+#[derive(Default)]
+struct PendingBells(Mutex<HashMap<String, (u64, BellPayload)>>);
+
+/// How long a bell waits for a window that is still starting up.
+const PENDING_BELL_MS: u64 = 3_000;
 
 #[derive(Clone, Serialize)]
 struct BellPayload {
@@ -89,7 +102,7 @@ fn place_popup(popup: &WebviewWindow) {
 /// Shows the message the way the user chose ("card", "overlay" or "notification")
 /// and, if asked, rings the bell. A style that cannot be shown falls back to the card.
 #[tauri::command]
-fn show_popup(
+async fn show_popup(
     app: AppHandle,
     id: String,
     category: String,
@@ -122,28 +135,100 @@ fn show_card(app: &AppHandle, payload: BellPayload) -> Result<(), String> {
         .map_err(|error| error.to_string())
 }
 
-/// A translucent layer over the whole primary screen; a click or Esc dismisses it.
+/// Names for the overlay windows, one per screen. The primary screen uses the window declared in
+/// tauri.conf.json ("overlay"); the others get "overlay-1", "overlay-2", and so on.
+fn overlay_labels(screens: usize, primary: usize) -> Vec<String> {
+    let mut next_extra = 1;
+    (0..screens)
+        .map(|index| {
+            if index == primary {
+                "overlay".to_string()
+            } else {
+                let label = format!("overlay-{next_extra}");
+                next_extra += 1;
+                label
+            }
+        })
+        .collect()
+}
+
+fn is_overlay(label: &str) -> bool {
+    label == "overlay" || label.starts_with("overlay-")
+}
+
+/// The window for one overlay label, created on first use for screens beyond the first.
+fn overlay_window(app: &AppHandle, label: &str) -> Result<WebviewWindow, String> {
+    if let Some(window) = app.get_webview_window(label) {
+        return Ok(window);
+    }
+    WebviewWindowBuilder::new(
+        app,
+        label,
+        WebviewUrl::App("index.html?view=overlay".into()),
+    )
+    .title("Little Interruptions")
+    .decorations(false)
+    .transparent(true)
+    .shadow(false)
+    .always_on_top(true)
+    .skip_taskbar(true)
+    .resizable(false)
+    .visible(false)
+    .build()
+    .map_err(|error| error.to_string())
+}
+
+/// A translucent layer over every screen; a click or Esc on any of them dismisses all.
 fn show_overlay(app: &AppHandle, payload: &BellPayload) -> Result<(), String> {
-    let overlay = app
+    let first = app
         .get_webview_window("overlay")
         .ok_or_else(|| "the overlay window is missing".to_string())?;
-    let monitor = overlay
-        .primary_monitor()
-        .map_err(|error| error.to_string())?
-        .ok_or_else(|| "no monitor".to_string())?;
-    let origin = monitor.position();
-    let size = monitor.size();
-    overlay
-        .set_position(PhysicalPosition::new(origin.x, origin.y))
+    let monitors = first
+        .available_monitors()
         .map_err(|error| error.to_string())?;
-    overlay
-        .set_size(PhysicalSize::new(size.width, size.height))
-        .map_err(|error| error.to_string())?;
-    overlay.show().map_err(|error| error.to_string())?;
-    // Focus lets Esc work; it also moves focus away from whatever the user was typing in.
-    let _ = overlay.set_focus();
-    app.emit_to("overlay", "bell", payload.clone())
-        .map_err(|error| error.to_string())
+    if monitors.is_empty() {
+        return Err("no monitor".to_string());
+    }
+    let primary_monitor = first.primary_monitor().ok().flatten();
+    let primary = primary_monitor
+        .and_then(|primary| {
+            monitors.iter().position(|monitor| {
+                monitor.position() == primary.position() && monitor.size() == primary.size()
+            })
+        })
+        .unwrap_or(0);
+
+    let pending = app.state::<PendingBells>();
+    for (index, label) in overlay_labels(monitors.len(), primary).iter().enumerate() {
+        let window = overlay_window(app, label)?;
+        let monitor = &monitors[index];
+        let origin = monitor.position();
+        let size = monitor.size();
+        window
+            .set_position(PhysicalPosition::new(origin.x, origin.y))
+            .map_err(|error| error.to_string())?;
+        window
+            .set_size(PhysicalSize::new(size.width, size.height))
+            .map_err(|error| error.to_string())?;
+        if let Ok(mut waiting) = pending.0.lock() {
+            waiting.insert(label.clone(), (now_ms(), payload.clone()));
+        }
+        window.show().map_err(|error| error.to_string())?;
+        // Focus lets Esc work; only the primary screen takes it, so typing is interrupted once.
+        if index == primary {
+            let _ = window.set_focus();
+        }
+        app.emit_to(label.as_str(), "bell", payload.clone())
+            .map_err(|error| error.to_string())?;
+    }
+    Ok(())
+}
+
+/// A new overlay window asks for the bell it was created for, since it was not listening in time.
+#[tauri::command]
+fn take_pending_bell(window: WebviewWindow, pending: State<PendingBells>) -> Option<BellPayload> {
+    let (shown_at, payload) = pending.0.lock().ok()?.remove(window.label())?;
+    (now_ms().saturating_sub(shown_at) < PENDING_BELL_MS).then_some(payload)
 }
 
 fn show_notification(app: &AppHandle, payload: &BellPayload) -> Result<(), String> {
@@ -210,8 +295,10 @@ fn panel_action(app: AppHandle, id: String) {
 
 #[tauri::command]
 fn hide_overlay(app: AppHandle) {
-    if let Some(overlay) = app.get_webview_window("overlay") {
-        let _ = overlay.hide();
+    for (label, window) in app.webview_windows() {
+        if is_overlay(&label) {
+            let _ = window.hide();
+        }
     }
 }
 
@@ -377,6 +464,7 @@ fn start_ticker(app: AppHandle) {
 
 fn main() {
     tauri::Builder::default()
+        .manage(PendingBells::default())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_autostart::init(
             MacosLauncher::LaunchAgent,
@@ -386,6 +474,7 @@ fn main() {
             show_popup,
             hide_popup,
             hide_overlay,
+            take_pending_bell,
             set_tray_status,
             panel_action,
             open_settings,
@@ -414,4 +503,29 @@ fn main() {
         })
         .run(tauri::generate_context!())
         .expect("error while running Little Interruptions");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{is_overlay, overlay_labels};
+
+    #[test]
+    fn the_primary_screen_uses_the_declared_overlay() {
+        assert_eq!(overlay_labels(1, 0), ["overlay"]);
+        assert_eq!(overlay_labels(3, 0), ["overlay", "overlay-1", "overlay-2"]);
+    }
+
+    #[test]
+    fn the_declared_overlay_goes_to_the_primary_even_when_it_is_not_first() {
+        assert_eq!(overlay_labels(3, 1), ["overlay-1", "overlay", "overlay-2"]);
+        assert_eq!(overlay_labels(2, 1), ["overlay-1", "overlay"]);
+    }
+
+    #[test]
+    fn only_overlay_windows_count_as_overlays() {
+        assert!(is_overlay("overlay"));
+        assert!(is_overlay("overlay-2"));
+        assert!(!is_overlay("popup"));
+        assert!(!is_overlay("overlays"));
+    }
 }
