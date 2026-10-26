@@ -13,6 +13,7 @@ export function createDefaultSettings(): Settings {
     soundEnabled: true,
     smartPause: true,
     smartPauseMic: true,
+    launchAtLogin: true,
     showCountdown: true,
     enabledCategories: [...REGULAR_CATEGORIES],
     displayStyle: "card",

@@ -35,6 +35,8 @@ export interface Settings {
   smartPause: boolean;
   /** Also count a microphone in use (a call, a recording) as busy. Only matters while smartPause is on. */
   smartPauseMic: boolean;
+  /** Start the app when the user logs in. */
+  launchAtLogin: boolean;
   /** Whether the menu bar shows the time left until the next bell. */
   showCountdown: boolean;
   /** Which kinds of message may be shown. Never empty. */

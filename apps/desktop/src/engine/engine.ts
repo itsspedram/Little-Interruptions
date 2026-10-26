@@ -128,6 +128,7 @@ class Engine {
 
     if (isNative()) {
       if (!this.settings.onboarded) void invoke("open_settings");
+      else this.syncLaunchAtLogin();
       void listen<TickPayload>("tick", (event) => this.handleTick(event.payload));
       void listen<string>("menu", (event) => this.handleMenu(event.payload));
       return;
@@ -149,6 +150,7 @@ class Engine {
     if (problems.length > 0) return problems;
     this.settings = candidate;
     storage.saveSettings(this.settings);
+    if (patch.launchAtLogin !== undefined || patch.onboarded !== undefined) this.syncLaunchAtLogin();
     this.commit();
     return [];
   }
@@ -200,6 +202,14 @@ class Engine {
     storage.saveState(this.state);
     this.commit();
     await showBell(picked.message, this.settings.soundEnabled, this.settings.displayStyle);
+  }
+
+  /** Make the system's login items match the setting. Nothing is registered before the first-run setup is done. */
+  private syncLaunchAtLogin(): void {
+    if (!isNative() || !this.settings.onboarded) return;
+    void invoke("set_launch_at_login", { enabled: this.settings.launchAtLogin }).catch(() => {
+      // Not fatal: the app works the same, it just won't start by itself.
+    });
   }
 
   /** Greet the user after a long absence: a welcome message if the packs have one, a plain greeting if not. */

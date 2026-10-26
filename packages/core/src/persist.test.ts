@@ -21,6 +21,7 @@ describe("parseSettings", () => {
       soundEnabled: false,
       smartPause: false,
       smartPauseMic: false,
+      launchAtLogin: false,
       showCountdown: false,
       enabledCategories: ["playful_weird"],
       displayStyle: "overlay",
@@ -35,6 +36,12 @@ describe("parseSettings", () => {
     expect(parseSettings({ smartPauseMic: false }).smartPauseMic).toBe(false);
     expect(parseSettings({}).smartPauseMic).toBe(true);
     expect(parseSettings({ smartPauseMic: "no" }).smartPauseMic).toBe(true);
+  });
+
+  it("keeps a saved launch-at-login choice and defaults a missing or invalid one to on", () => {
+    expect(parseSettings({ launchAtLogin: false }).launchAtLogin).toBe(false);
+    expect(parseSettings({}).launchAtLogin).toBe(true);
+    expect(parseSettings({ launchAtLogin: 0 }).launchAtLogin).toBe(true);
   });
 
   it("falls back to all kinds when no known message kind is saved", () => {
@@ -79,6 +86,7 @@ describe("parseSettings", () => {
       "enabledPacks",
       "idleMinutes",
       "intervalMinutes",
+      "launchAtLogin",
       "onboarded",
       "showCountdown",
       "smartPause",

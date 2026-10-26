@@ -16,6 +16,10 @@ describe("defaults", () => {
     expect(createDefaultSettings().showCountdown).toBe(true);
   });
 
+  it("opens at login by default", () => {
+    expect(createDefaultSettings().launchAtLogin).toBe(true);
+  });
+
   it("also waits for a microphone in use by default", () => {
     expect(createDefaultSettings().smartPauseMic).toBe(true);
   });
