@@ -2,6 +2,6 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Lets every window listen to events from the Rust side.",
-  "windows": ["main", "popup", "panel", "overlay"],
+  "windows": ["main", "popup", "panel", "overlay", "overlay-*"],
   "permissions": ["core:default", "notification:default"]
 }
