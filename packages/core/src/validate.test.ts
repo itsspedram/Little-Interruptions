@@ -180,6 +180,11 @@ describe("validateSettings: kinds, style and welcome", () => {
     for (const style of ["card", "overlay", "notification"]) expect(bad({ displayStyle: style })).toEqual([]);
   });
 
+  it("checks the microphone switch", () => {
+    expect(bad({ smartPauseMic: "yes" })).not.toEqual([]);
+    expect(bad({ smartPauseMic: false })).toEqual([]);
+  });
+
   it("checks the welcome and onboarding fields", () => {
     expect(bad({ welcomeBack: "yes" })).not.toEqual([]);
     expect(bad({ welcomeAfterMinutes: 0 })).not.toEqual([]);

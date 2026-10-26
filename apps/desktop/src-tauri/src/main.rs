@@ -3,6 +3,7 @@
 
 mod busy;
 mod idle;
+mod mic;
 mod sound;
 
 use std::{
@@ -48,6 +49,7 @@ struct TickPayload {
     idle_seconds: f64,
     gap_ms: u64,
     busy: bool,
+    mic_in_use: bool,
 }
 
 #[derive(Clone, Serialize)]
@@ -347,6 +349,8 @@ fn start_ticker(app: AppHandle) {
                     idle_seconds: idle::idle_seconds(),
                     gap_ms,
                     busy,
+                    // Cheap (no process launch), so it is read on every heartbeat.
+                    mic_in_use: mic::is_in_use(),
                 },
             );
         }

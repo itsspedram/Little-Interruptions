@@ -16,6 +16,10 @@ describe("defaults", () => {
     expect(createDefaultSettings().showCountdown).toBe(true);
   });
 
+  it("also waits for a microphone in use by default", () => {
+    expect(createDefaultSettings().smartPauseMic).toBe(true);
+  });
+
   it("shows all regular message kinds, the card style and a welcome after 3 hours by default", () => {
     const settings = createDefaultSettings();
     expect(settings.enabledCategories).toEqual(["gentle_caring", "playful_weird", "tiny_mindfulness"]);

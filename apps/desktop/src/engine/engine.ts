@@ -36,6 +36,7 @@ interface TickPayload {
   idleSeconds: number;
   gapMs: number;
   busy: boolean;
+  micInUse: boolean;
 }
 
 export type SyncStatus =
@@ -136,7 +137,7 @@ class Engine {
     let last = Date.now();
     window.setInterval(() => {
       const now = Date.now();
-      this.handleTick({ now, idleSeconds: 0, gapMs: now - last, busy: false });
+      this.handleTick({ now, idleSeconds: 0, gapMs: now - last, busy: false, micInUse: false });
       last = now;
     }, BROWSER_TICK_MS);
   }
@@ -275,8 +276,9 @@ class Engine {
   }
 
   private handleTick(payload: TickPayload): void {
-    this.busy = payload.busy;
-    const result = onTick(payload, this.settings, this.state);
+    // Busy means: something holds the display awake, or (if switched on) a microphone is in use.
+    this.busy = payload.busy || (this.settings.smartPauseMic && payload.micInUse);
+    const result = onTick({ ...payload, busy: this.busy }, this.settings, this.state);
     if (result.state !== this.state) {
       this.state = result.state;
       storage.saveState(this.state);

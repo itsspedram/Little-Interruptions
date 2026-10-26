@@ -33,6 +33,8 @@ export interface Settings {
   soundEnabled: boolean;
   /** Hold a due bell while the user is busy (meeting, video, presentation) and ring when they are done. */
   smartPause: boolean;
+  /** Also count a microphone in use (a call, a recording) as busy. Only matters while smartPause is on. */
+  smartPauseMic: boolean;
   /** Whether the menu bar shows the time left until the next bell. */
   showCountdown: boolean;
   /** Which kinds of message may be shown. Never empty. */
