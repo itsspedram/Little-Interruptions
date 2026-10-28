@@ -30,3 +30,18 @@ export const KIND_LABELS: Record<string, { label: string; hint: string }> = {
   playful_weird: { label: "Playful", hint: "Small, silly surprises" },
   tiny_mindfulness: { label: "Mindful", hint: "Tiny moments of attention" },
 };
+
+/** Names the user sees for the drop sounds. */
+export const SOUND_LABELS: Record<string, string> = {
+  random: "Random",
+  drip: "Drip",
+  bloop: "Bloop",
+  plink: "Plink",
+  pond: "Pond",
+  twin: "Twin",
+  glass: "Glass",
+  cave: "Cave",
+  tiny: "Tiny",
+  leaf: "Leaf",
+  bubble: "Bubble",
+};

@@ -16,6 +16,10 @@ describe("defaults", () => {
     expect(createDefaultSettings().showCountdown).toBe(true);
   });
 
+  it("plays the drip sound by default", () => {
+    expect(createDefaultSettings().soundChoice).toBe("drip");
+  });
+
   it("opens at login by default", () => {
     expect(createDefaultSettings().launchAtLogin).toBe(true);
   });

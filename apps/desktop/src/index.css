@@ -89,22 +89,19 @@
   @keyframes bell-swing {
     0%,
     100% {
-      transform: rotate(0deg);
+      transform: scale(1, 1) translateY(0);
     }
-    12% {
-      transform: rotate(16deg);
+    14% {
+      transform: scale(0.88, 1.14) translateY(-1px);
     }
-    30% {
-      transform: rotate(-13deg);
+    34% {
+      transform: scale(1.1, 0.9) translateY(1px);
     }
-    48% {
-      transform: rotate(9deg);
+    54% {
+      transform: scale(0.97, 1.04) translateY(0);
     }
-    66% {
-      transform: rotate(-5deg);
-    }
-    84% {
-      transform: rotate(2deg);
+    74% {
+      transform: scale(1.02, 0.99) translateY(0);
     }
   }
 }

@@ -8,6 +8,14 @@ export const WELCOME_CATEGORY = "welcome_back";
 export const CATEGORIES = [...REGULAR_CATEGORIES, WELCOME_CATEGORY] as const;
 export type Category = (typeof CATEGORIES)[number];
 
+/** The water-drop sounds that ship with the app (files in src-tauri/assets/drops). */
+export const SOUND_IDS = ["drip", "bloop", "plink", "pond", "twin", "glass", "cave", "tiny", "leaf", "bubble"] as const;
+export type SoundId = (typeof SOUND_IDS)[number];
+
+/** One fixed sound, or "random" to draw a different one each time. */
+export const SOUND_CHOICES = ["random", ...SOUND_IDS] as const;
+export type SoundChoice = (typeof SOUND_CHOICES)[number];
+
 /** How a bell is shown: a small card, a translucent full-screen overlay, or a system notification. */
 export const DISPLAY_STYLES = ["card", "overlay", "notification"] as const;
 export type DisplayStyle = (typeof DISPLAY_STYLES)[number];
@@ -31,6 +39,8 @@ export interface Settings {
   autoUpdatePacks: boolean;
   /** Whether the bell sound plays together with the message. */
   soundEnabled: boolean;
+  /** Which drop sound plays, or "random". Only used while soundEnabled is on. */
+  soundChoice: SoundChoice;
   /** Hold a due bell while the user is busy (meeting, video, presentation) and ring when they are done. */
   smartPause: boolean;
   /** Also count a microphone in use (a call, a recording) as busy. Only matters while smartPause is on. */

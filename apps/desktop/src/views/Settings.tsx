@@ -5,7 +5,7 @@ import type { Snapshot } from "../engine/engine.ts";
 import { useEngine } from "../engine/useEngine.ts";
 import { BellIcon, Button, Progress, Segmented, Toggle } from "../ui/controls.tsx";
 import { describeStatus } from "../ui/describe.ts";
-import { IntervalPicker, KindPicker, MinutesField, StylePicker } from "../ui/fields.tsx";
+import { IntervalPicker, KindPicker, MinutesField, SoundPicker, StylePicker } from "../ui/fields.tsx";
 
 function formatChecked(timestamp: number | null, now: number): string {
   if (timestamp === null) return "never";
@@ -97,10 +97,15 @@ export function SettingsView() {
             onCommit={(value) => engine.updateSettings({ idleMinutes: value })}
           />
           <Toggle
-            label="Play the bell sound"
+            label="Play a water-drop sound"
             checked={settings.soundEnabled}
             onChange={(next) => engine.updateSettings({ soundEnabled: next })}
           />
+          {settings.soundEnabled ? (
+            <div className="animate-rise motion-reduce:animate-none">
+              <SoundPicker settings={settings} />
+            </div>
+          ) : null}
           <Toggle
             label="Wait if I'm busy"
             hint="During calls, video and presentations the bell holds back, then rings when you're done. macOS only."

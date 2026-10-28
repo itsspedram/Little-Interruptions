@@ -9,6 +9,7 @@ import {
   onTick,
   pauseUntil,
   pickMessage,
+  pickSound,
   pickWelcome,
   recordPackCheck,
   resume,
@@ -17,7 +18,7 @@ import {
   trayTitle,
   validateSettings,
 } from "@little-interruptions/core";
-import type { DisplayStyle, Message, Settings, State, Status } from "@little-interruptions/core";
+import type { DisplayStyle, Message, Settings, SoundId, State, Status } from "@little-interruptions/core";
 import { PACK_BASE_URL, isUpdateSourceConfigured } from "../config.ts";
 import { loadPacks } from "./packs.ts";
 import type { PackEntry } from "./packs.ts";
@@ -81,7 +82,7 @@ async function fetchJson(url: string): Promise<unknown> {
   }
 }
 
-async function showBell(message: Message, sound: boolean, style: DisplayStyle): Promise<void> {
+async function showBell(message: Message, sound: SoundId | null, style: DisplayStyle): Promise<void> {
   if (!isNative()) {
     console.info("[bell]", message.text);
     return;
@@ -201,7 +202,11 @@ class Engine {
     this.state = picked.state;
     storage.saveState(this.state);
     this.commit();
-    await showBell(picked.message, this.settings.soundEnabled, this.settings.displayStyle);
+    await showBell(
+      picked.message,
+      this.settings.soundEnabled ? pickSound(this.settings, Math.random) : null,
+      this.settings.displayStyle,
+    );
   }
 
   /** Make the system's login items match the setting. Nothing is registered before the first-run setup is done. */
@@ -223,7 +228,7 @@ class Engine {
       category: "welcome_back",
       text: "Welcome back.",
     };
-    await showBell(message, false, this.settings.displayStyle);
+    await showBell(message, null, this.settings.displayStyle);
   }
 
   /** Download new messages now, whether or not a daily check is due. */

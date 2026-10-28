@@ -22,6 +22,7 @@ describe("parseSettings", () => {
       smartPause: false,
       smartPauseMic: false,
       launchAtLogin: false,
+      soundChoice: "random",
       showCountdown: false,
       enabledCategories: ["playful_weird"],
       displayStyle: "overlay",
@@ -36,6 +37,13 @@ describe("parseSettings", () => {
     expect(parseSettings({ smartPauseMic: false }).smartPauseMic).toBe(false);
     expect(parseSettings({}).smartPauseMic).toBe(true);
     expect(parseSettings({ smartPauseMic: "no" }).smartPauseMic).toBe(true);
+  });
+
+  it("keeps a known sound choice and replaces an unknown one with the default", () => {
+    expect(parseSettings({ soundChoice: "cave" }).soundChoice).toBe("cave");
+    expect(parseSettings({ soundChoice: "random" }).soundChoice).toBe("random");
+    expect(parseSettings({ soundChoice: "airhorn" }).soundChoice).toBe("drip");
+    expect(parseSettings({}).soundChoice).toBe("drip");
   });
 
   it("keeps a saved launch-at-login choice and defaults a missing or invalid one to on", () => {
@@ -91,6 +99,7 @@ describe("parseSettings", () => {
       "showCountdown",
       "smartPause",
       "smartPauseMic",
+      "soundChoice",
       "soundEnabled",
       "version",
       "welcomeAfterMinutes",

@@ -1,4 +1,4 @@
-import { CATEGORIES, DISPLAY_STYLES, MAX_MESSAGE_LENGTH, REGULAR_CATEGORIES } from "./types.ts";
+import { CATEGORIES, DISPLAY_STYLES, MAX_MESSAGE_LENGTH, REGULAR_CATEGORIES, SOUND_CHOICES } from "./types.ts";
 import type { Message, MessagePack } from "./types.ts";
 
 /** Upper bound on messages in one pack; protects against absurd remote data. */
@@ -135,6 +135,9 @@ export function validateSettings(input: unknown): string[] {
   }
   if (typeof input.soundEnabled !== "boolean") {
     problems.push("soundEnabled must be true or false");
+  }
+  if (!(SOUND_CHOICES as readonly unknown[]).includes(input.soundChoice)) {
+    problems.push(`soundChoice must be one of ${SOUND_CHOICES.join(", ")}`);
   }
   if (typeof input.smartPause !== "boolean") {
     problems.push("smartPause must be true or false");
