@@ -1,23 +1,30 @@
 import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
+import { emit, listen } from "@tauri-apps/api/event";
 import {
   collectMessages,
+  collectWelcomeMessages,
   endSession,
+  getStatus,
   mergePack,
-  nextFireTime,
   onTick,
   pauseUntil,
   pickMessage,
+  pickWelcome,
   recordPackCheck,
   resume,
+  skipNext,
   shouldCheckForUpdates,
+  trayTitle,
   validateSettings,
 } from "@little-interruptions/core";
-import type { Message, Settings, State } from "@little-interruptions/core";
+import type { DisplayStyle, Message, Settings, State, Status } from "@little-interruptions/core";
 import { PACK_BASE_URL, isUpdateSourceConfigured } from "../config.ts";
 import { loadPacks } from "./packs.ts";
 import type { PackEntry } from "./packs.ts";
 import { storage } from "./storage.ts";
+import { describeStatus } from "../ui/describe.ts";
+import { PANEL_STATUS_EVENT } from "../ui/panelTypes.ts";
+import type { PanelPayload } from "../ui/panelTypes.ts";
 
 const HOUR_MS = 60 * 60 * 1000;
 const FETCH_TIMEOUT_MS = 15_000;
@@ -28,6 +35,8 @@ interface TickPayload {
   now: number;
   idleSeconds: number;
   gapMs: number;
+  busy: boolean;
+  micInUse: boolean;
 }
 
 export type SyncStatus =
@@ -48,7 +57,7 @@ export interface Snapshot {
   state: State;
   packs: PackSummary[];
   messageCount: number;
-  nextFireAt: number | null;
+  status: Status;
   now: number;
   sync: SyncStatus;
   isNative: boolean;
@@ -72,12 +81,12 @@ async function fetchJson(url: string): Promise<unknown> {
   }
 }
 
-async function showBell(message: Message, sound: boolean): Promise<void> {
+async function showBell(message: Message, sound: boolean, style: DisplayStyle): Promise<void> {
   if (!isNative()) {
     console.info("[bell]", message.text);
     return;
   }
-  await invoke("show_popup", { id: message.id, category: message.category, text: message.text, sound });
+  await invoke("show_popup", { id: message.id, category: message.category, text: message.text, sound, style });
 }
 
 /**
@@ -95,6 +104,8 @@ class Engine {
   private syncing = false;
   private retryAt = 0;
   private started = false;
+  private busy = false;
+  private lastTrayKey = "";
   private snapshot: Snapshot;
 
   constructor() {
@@ -116,6 +127,8 @@ class Engine {
     this.started = true;
 
     if (isNative()) {
+      if (!this.settings.onboarded) void invoke("open_settings");
+      else this.syncLaunchAtLogin();
       void listen<TickPayload>("tick", (event) => this.handleTick(event.payload));
       void listen<string>("menu", (event) => this.handleMenu(event.payload));
       return;
@@ -125,7 +138,7 @@ class Engine {
     let last = Date.now();
     window.setInterval(() => {
       const now = Date.now();
-      this.handleTick({ now, idleSeconds: 0, gapMs: now - last });
+      this.handleTick({ now, idleSeconds: 0, gapMs: now - last, busy: false, micInUse: false });
       last = now;
     }, BROWSER_TICK_MS);
   }
@@ -137,8 +150,17 @@ class Engine {
     if (problems.length > 0) return problems;
     this.settings = candidate;
     storage.saveSettings(this.settings);
+    if (patch.launchAtLogin !== undefined || patch.onboarded !== undefined) this.syncLaunchAtLogin();
     this.commit();
     return [];
+  }
+
+  /** Switch a kind of message on or off. At least one kind must stay on. */
+  setCategoryEnabled(category: string, enabled: boolean): boolean {
+    const others = this.settings.enabledCategories.filter((name) => name !== category);
+    const next = enabled ? [...others, category] : others;
+    if (next.length === 0) return false;
+    return this.updateSettings({ enabledCategories: next }).length === 0;
   }
 
   /** Switch a pack on or off. At least one pack must stay on. */
@@ -151,6 +173,13 @@ class Engine {
 
   pauseFor(minutes: number): void {
     this.state = pauseUntil(this.state, Date.now() + minutes * 60_000);
+    storage.saveState(this.state);
+    this.commit();
+  }
+
+  /** Skip only the next bell. */
+  skipNextBell(): void {
+    this.state = skipNext(Date.now(), this.settings, this.state);
     storage.saveState(this.state);
     this.commit();
   }
@@ -172,7 +201,29 @@ class Engine {
     this.state = picked.state;
     storage.saveState(this.state);
     this.commit();
-    await showBell(picked.message, this.settings.soundEnabled);
+    await showBell(picked.message, this.settings.soundEnabled, this.settings.displayStyle);
+  }
+
+  /** Make the system's login items match the setting. Nothing is registered before the first-run setup is done. */
+  private syncLaunchAtLogin(): void {
+    if (!isNative() || !this.settings.onboarded) return;
+    void invoke("set_launch_at_login", { enabled: this.settings.launchAtLogin }).catch(() => {
+      // Not fatal: the app works the same, it just won't start by itself.
+    });
+  }
+
+  /** Greet the user after a long absence: a welcome message if the packs have one, a plain greeting if not. */
+  private async welcome(): Promise<void> {
+    const pool = collectWelcomeMessages(
+      this.packs.map((entry) => entry.pack),
+      this.settings,
+    );
+    const message = pickWelcome(pool, Math.random) ?? {
+      id: "welcome-plain",
+      category: "welcome_back",
+      text: "Welcome back.",
+    };
+    await showBell(message, false, this.settings.displayStyle);
   }
 
   /** Download new messages now, whether or not a daily check is due. */
@@ -235,12 +286,18 @@ class Engine {
   }
 
   private handleTick(payload: TickPayload): void {
-    const result = onTick(payload, this.settings, this.state);
+    // Busy means: something holds the display awake, or (if switched on) a microphone is in use.
+    this.busy = payload.busy || (this.settings.smartPauseMic && payload.micInUse);
+    const result = onTick({ ...payload, busy: this.busy }, this.settings, this.state);
     if (result.state !== this.state) {
       this.state = result.state;
       storage.saveState(this.state);
     }
-    if (result.ring) void this.ring();
+    // Until the first-run setup is finished nothing rings; the user hasn't chosen how yet.
+    if (this.settings.onboarded) {
+      if (result.welcome) void this.welcome();
+      else if (result.ring) void this.ring();
+    }
     this.maybeCheckForUpdates(payload.now);
     this.commit(payload.now);
   }
@@ -259,7 +316,12 @@ class Engine {
       case "resume":
         this.resumeNow();
         break;
+      case "panel_opened":
+        // The quick panel just opened; send it fresh numbers.
+        this.commit();
+        break;
       default:
+        if (id.startsWith("interval:")) this.updateSettings({ intervalMinutes: Number(id.slice("interval:".length)) });
         break;
     }
   }
@@ -285,7 +347,7 @@ class Engine {
         count: pack.messages.length,
       })),
       messageCount: messages.length,
-      nextFireAt: nextFireTime(now, this.settings, this.state),
+      status: getStatus(now, this.settings, this.state, this.busy),
       now,
       sync: this.syncStatus,
       isNative: isNative(),
@@ -295,6 +357,24 @@ class Engine {
   private commit(now: number = Date.now()): void {
     this.snapshot = this.buildSnapshot(now);
     for (const listener of this.listeners) listener();
+    this.publish();
+  }
+
+  /** Push the live status to the menu bar and to the quick panel. */
+  private publish(): void {
+    if (!isNative()) return;
+    const { status, settings, now } = this.snapshot;
+
+    const title = trayTitle(status, settings);
+    const tooltip = `Little Interruptions · ${describeStatus(status).title}`;
+    const key = `${title}\u0000${tooltip}`;
+    if (key !== this.lastTrayKey) {
+      this.lastTrayKey = key;
+      void invoke("set_tray_status", { title, tooltip });
+    }
+
+    const payload: PanelPayload = { status, intervalMinutes: settings.intervalMinutes, now };
+    void emit(PANEL_STATUS_EVENT, payload);
   }
 }
 

@@ -8,9 +8,9 @@ export function startSession(state: State, now: number): State {
   return { ...state, sessionStartedAt: now };
 }
 
-/** End the session (idle, lock, sleep). The shuffle bag and any pause survive. */
+/** End the session (idle, lock, sleep). The shuffle bag and any pause survive; a held bell does not. */
 export function endSession(state: State): State {
-  return { ...state, sessionStartedAt: null };
+  return { ...state, sessionStartedAt: null, deferredRing: false };
 }
 
 export function pauseUntil(state: State, until: number): State {
@@ -50,4 +50,11 @@ export function nextFireTime(now: number, settings: Settings, state: State): num
 /** True once the user has been inactive for at least `idleMinutes`. */
 export function isSessionExpired(now: number, lastActivityAt: number, settings: Settings): boolean {
   return now - lastActivityAt >= settings.idleMinutes * MS_PER_MINUTE;
+}
+
+/** Skip the next bell only: stay quiet until just past it, then carry on with the normal grid. */
+export function skipNext(now: number, settings: Settings, state: State): State {
+  const next = nextFireTime(now, settings, state);
+  if (next === null) return state;
+  return { ...state, pausedUntil: next + 1 };
 }

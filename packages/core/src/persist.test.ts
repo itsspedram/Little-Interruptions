@@ -19,8 +19,47 @@ describe("parseSettings", () => {
       enabledPacks: ["Little Interruptions", "Other"],
       autoUpdatePacks: false,
       soundEnabled: false,
+      smartPause: false,
+      smartPauseMic: false,
+      launchAtLogin: false,
+      showCountdown: false,
+      enabledCategories: ["playful_weird"],
+      displayStyle: "overlay",
+      welcomeBack: false,
+      welcomeAfterMinutes: 240,
+      onboarded: true,
     };
     expect(parseSettings(saved)).toEqual(saved);
+  });
+
+  it("keeps a saved microphone choice and defaults a missing or invalid one to on", () => {
+    expect(parseSettings({ smartPauseMic: false }).smartPauseMic).toBe(false);
+    expect(parseSettings({}).smartPauseMic).toBe(true);
+    expect(parseSettings({ smartPauseMic: "no" }).smartPauseMic).toBe(true);
+  });
+
+  it("keeps a saved launch-at-login choice and defaults a missing or invalid one to on", () => {
+    expect(parseSettings({ launchAtLogin: false }).launchAtLogin).toBe(false);
+    expect(parseSettings({}).launchAtLogin).toBe(true);
+    expect(parseSettings({ launchAtLogin: 0 }).launchAtLogin).toBe(true);
+  });
+
+  it("falls back to all kinds when no known message kind is saved", () => {
+    const all = createDefaultSettings().enabledCategories;
+    expect(parseSettings({ enabledCategories: [] }).enabledCategories).toEqual(all);
+    expect(parseSettings({ enabledCategories: ["nonsense"] }).enabledCategories).toEqual(all);
+    expect(parseSettings({ enabledCategories: "playful_weird" }).enabledCategories).toEqual(all);
+  });
+
+  it("keeps only known message kinds, in a fixed order", () => {
+    const result = parseSettings({ enabledCategories: ["tiny_mindfulness", "welcome_back", "gentle_caring", "x"] });
+    expect(result.enabledCategories).toEqual(["gentle_caring", "tiny_mindfulness"]);
+  });
+
+  it("replaces an unknown display style and treats a missing onboarded as not done", () => {
+    const result = parseSettings({ displayStyle: "hologram", onboarded: "yes" });
+    expect(result.displayStyle).toBe("card");
+    expect(result.onboarded).toBe(false);
   });
 
   it("fills in fields that an older version never saved", () => {
@@ -28,6 +67,8 @@ describe("parseSettings", () => {
     expect(result.intervalMinutes).toBe(90);
     expect(result.soundEnabled).toBe(true);
     expect(result.autoUpdatePacks).toBe(true);
+    expect(result.smartPause).toBe(true);
+    expect(result.showCountdown).toBe(true);
   });
 
   it("replaces only the invalid field with its default", () => {
@@ -40,11 +81,20 @@ describe("parseSettings", () => {
     const result = parseSettings({ ...createDefaultSettings(), sneaky: true });
     expect(Object.keys(result).sort()).toEqual([
       "autoUpdatePacks",
+      "displayStyle",
+      "enabledCategories",
       "enabledPacks",
       "idleMinutes",
       "intervalMinutes",
+      "launchAtLogin",
+      "onboarded",
+      "showCountdown",
+      "smartPause",
+      "smartPauseMic",
       "soundEnabled",
       "version",
+      "welcomeAfterMinutes",
+      "welcomeBack",
     ]);
   });
 
@@ -53,7 +103,7 @@ describe("parseSettings", () => {
       undefined,
       42,
       {},
-      { intervalMinutes: "60", idleMinutes: -1, enabledPacks: [1, 2], autoUpdatePacks: "yes", soundEnabled: 0 },
+      { intervalMinutes: "60", idleMinutes: -1, enabledPacks: [1, 2], autoUpdatePacks: "yes", soundEnabled: 0, smartPause: "on", showCountdown: 1 },
       { intervalMinutes: Number.NaN, idleMinutes: Number.POSITIVE_INFINITY },
     ];
     for (const input of garbage) {
@@ -82,6 +132,8 @@ describe("parseState", () => {
       pausedUntil: 1_700_000_900_000,
       bag: ["li-003", "li-011"],
       lastPackCheckAt: 1_699_999_000_000,
+      deferredRing: true,
+      lastActiveAt: 1_700_000_500_000,
     };
     expect(parseState(saved)).toEqual(saved);
   });
@@ -102,7 +154,20 @@ describe("parseState", () => {
 
   it("drops unknown fields", () => {
     const result = parseState({ ...createInitialState(), sneaky: true });
-    expect(Object.keys(result).sort()).toEqual(["bag", "lastPackCheckAt", "pausedUntil", "sessionStartedAt", "version"]);
+    expect(Object.keys(result).sort()).toEqual([
+      "bag",
+      "deferredRing",
+      "lastActiveAt",
+      "lastPackCheckAt",
+      "pausedUntil",
+      "sessionStartedAt",
+      "version",
+    ]);
+  });
+
+  it("treats a missing or invalid deferredRing as false", () => {
+    expect(parseState({ version: 1 }).deferredRing).toBe(false);
+    expect(parseState({ version: 1, deferredRing: "yes" }).deferredRing).toBe(false);
   });
 
   it("copies the bag instead of sharing it", () => {

@@ -21,12 +21,35 @@ async function bootstrap(): Promise<void> {
     return;
   }
 
+  if (view === "overlay") {
+    document.documentElement.dataset["view"] = "overlay";
+    const { Overlay } = await import("./views/Overlay.tsx");
+    root.render(
+      <StrictMode>
+        <Overlay />
+      </StrictMode>,
+    );
+    return;
+  }
+
+  if (view === "panel") {
+    // Like the popup, the panel is a dumb view: the engine in the settings window feeds it.
+    document.documentElement.dataset["view"] = "panel";
+    const { Panel } = await import("./views/Panel.tsx");
+    root.render(
+      <StrictMode>
+        <Panel />
+      </StrictMode>,
+    );
+    return;
+  }
+
   const { engine } = await import("./engine/engine.ts");
-  const { SettingsView } = await import("./views/Settings.tsx");
+  const { App } = await import("./views/App.tsx");
   engine.start();
   root.render(
     <StrictMode>
-      <SettingsView />
+      <App />
     </StrictMode>,
   );
 }

@@ -7,6 +7,9 @@ export const ACTIVE_WITHIN_SECONDS = 15;
 /** A gap between two ticks at least this long means the computer slept. */
 export const SLEEP_GAP_MS = 60_000;
 
+/** How often "last seen" is refreshed while the user keeps working. */
+const LAST_SEEN_STEP_MS = 60_000;
+
 export interface TickInput {
   /** Current time, epoch milliseconds. */
   now: number;
@@ -14,18 +17,27 @@ export interface TickInput {
   idleSeconds: number;
   /** Milliseconds since the previous tick; 0 for the very first tick. */
   gapMs: number;
+  /** The user is occupied: in a call, watching video, presenting. Only used when smart pause is on. */
+  busy?: boolean;
 }
 
 /**
  * One heartbeat from the shell. Decides, in order:
  * 1. a running session ends if the computer slept or the user went idle;
  * 2. a session starts if there is none and the user is clearly at the computer;
- * 3. a bell rings if a slot fell between the previous tick and now.
+ * 3. a bell falls due if a slot passed between the previous tick and now;
+ * 4. a due bell is held while the user is busy (smart pause) and rings, once,
+ *    at the first tick when they are not. A held bell is dropped if the session
+ *    ends or the user asks for quiet.
  *
  * Because a restarted session has its first slot a full interval away, nothing
  * missed during sleep or idle is ever replayed.
  */
-export function onTick(input: TickInput, settings: Settings, state: State): { state: State; ring: boolean } {
+export function onTick(
+  input: TickInput,
+  settings: Settings,
+  state: State,
+): { state: State; ring: boolean; welcome: boolean } {
   const { now, idleSeconds, gapMs } = input;
   let next = state;
 
@@ -38,7 +50,32 @@ export function onTick(input: TickInput, settings: Settings, state: State): { st
     next = startSession(next, now);
   }
 
+  // Welcome back: the user is here again after an absence of at least `welcomeAfterMinutes`
+  // (never shorter than the idle limit, so it always follows a finished session).
+  const present = idleSeconds < ACTIVE_WITHIN_SECONDS;
+  let welcome = false;
+  if (present) {
+    const seenAt = next.lastActiveAt;
+    const away = seenAt === null ? 0 : now - seenAt;
+    const threshold = Math.max(settings.welcomeAfterMinutes, settings.idleMinutes) * 60_000;
+    welcome = settings.welcomeBack && away >= threshold;
+    // Saved at most once a minute so the state file is not rewritten on every tick;
+    // a clock that jumped backwards is simply reset.
+    if (seenAt === null || away < 0 || away >= LAST_SEEN_STEP_MS) next = { ...next, lastActiveAt: now };
+  }
+
   const previousTick = now - Math.max(0, gapMs);
   const due = nextFireTime(previousTick, settings, next);
-  return { state: next, ring: due !== null && due <= now };
+  const slotPassed = due !== null && due <= now;
+
+  const quiet = next.pausedUntil !== null && now < next.pausedUntil;
+  const held = next.sessionStartedAt !== null && !quiet && next.deferredRing;
+  const wanted = slotPassed || held;
+
+  const hold = wanted && settings.smartPause && input.busy === true;
+  // A bell that falls due at the very moment of a welcome is skipped, like any other missed one.
+  const ring = wanted && !hold && !welcome;
+
+  if (next.deferredRing !== hold) next = { ...next, deferredRing: hold };
+  return { state: next, ring, welcome };
 }

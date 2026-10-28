@@ -11,6 +11,28 @@ describe("defaults", () => {
     expect(createDefaultSettings().soundEnabled).toBe(true);
   });
 
+  it("turns smart pause and the menu bar countdown on by default", () => {
+    expect(createDefaultSettings().smartPause).toBe(true);
+    expect(createDefaultSettings().showCountdown).toBe(true);
+  });
+
+  it("opens at login by default", () => {
+    expect(createDefaultSettings().launchAtLogin).toBe(true);
+  });
+
+  it("also waits for a microphone in use by default", () => {
+    expect(createDefaultSettings().smartPauseMic).toBe(true);
+  });
+
+  it("shows all regular message kinds, the card style and a welcome after 3 hours by default", () => {
+    const settings = createDefaultSettings();
+    expect(settings.enabledCategories).toEqual(["gentle_caring", "playful_weird", "tiny_mindfulness"]);
+    expect(settings.displayStyle).toBe("card");
+    expect(settings.welcomeBack).toBe(true);
+    expect(settings.welcomeAfterMinutes).toBe(180);
+    expect(settings.onboarded).toBe(false);
+  });
+
   it("starts with no session, no pause, an empty bag and no update check", () => {
     expect(createInitialState()).toEqual({
       version: 1,
@@ -18,6 +40,8 @@ describe("defaults", () => {
       pausedUntil: null,
       bag: [],
       lastPackCheckAt: null,
+      deferredRing: false,
+      lastActiveAt: null,
     });
   });
 

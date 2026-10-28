@@ -1,3 +1,4 @@
+import { REGULAR_CATEGORIES } from "./types.ts";
 import type { Settings, State } from "./types.ts";
 
 export const DEFAULT_PACK = "Little Interruptions";
@@ -10,6 +11,15 @@ export function createDefaultSettings(): Settings {
     enabledPacks: [DEFAULT_PACK],
     autoUpdatePacks: true,
     soundEnabled: true,
+    smartPause: true,
+    smartPauseMic: true,
+    launchAtLogin: true,
+    showCountdown: true,
+    enabledCategories: [...REGULAR_CATEGORIES],
+    displayStyle: "card",
+    welcomeBack: true,
+    welcomeAfterMinutes: 180,
+    onboarded: false,
   };
 }
 
@@ -20,5 +30,7 @@ export function createInitialState(): State {
     pausedUntil: null,
     bag: [],
     lastPackCheckAt: null,
+    deferredRing: false,
+    lastActiveAt: null,
   };
 }

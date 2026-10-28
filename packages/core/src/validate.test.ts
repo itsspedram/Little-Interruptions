@@ -152,11 +152,58 @@ describe("validateSettings", () => {
     expect(validateSettings(withChange({ soundEnabled: "yes" })).length).toBeGreaterThan(0);
   });
 
+  it("rejects a missing smartPause or showCountdown flag", () => {
+    expect(validateSettings(withChange({ smartPause: undefined })).length).toBeGreaterThan(0);
+    expect(validateSettings(withChange({ showCountdown: "yes" })).length).toBeGreaterThan(0);
+  });
+
   it("rejects an unknown settings version", () => {
     expect(validateSettings(withChange({ version: 2 })).length).toBeGreaterThan(0);
   });
 
   it("rejects something that is not an object", () => {
     expect(validateSettings(null).length).toBeGreaterThan(0);
+  });
+});
+
+describe("validateSettings: kinds, style and welcome", () => {
+  const bad = (change: Record<string, unknown>) => validateSettings({ ...createDefaultSettings(), ...change });
+
+  it("rejects an empty or unknown list of message kinds", () => {
+    expect(bad({ enabledCategories: [] })).not.toEqual([]);
+    expect(bad({ enabledCategories: ["welcome_back"] })).not.toEqual([]);
+    expect(bad({ enabledCategories: ["playful_weird"] })).toEqual([]);
+  });
+
+  it("rejects an unknown display style", () => {
+    expect(bad({ displayStyle: "hologram" })).not.toEqual([]);
+    for (const style of ["card", "overlay", "notification"]) expect(bad({ displayStyle: style })).toEqual([]);
+  });
+
+  it("checks the launch-at-login switch", () => {
+    expect(bad({ launchAtLogin: "yes" })).not.toEqual([]);
+    expect(bad({ launchAtLogin: false })).toEqual([]);
+  });
+
+  it("checks the microphone switch", () => {
+    expect(bad({ smartPauseMic: "yes" })).not.toEqual([]);
+    expect(bad({ smartPauseMic: false })).toEqual([]);
+  });
+
+  it("checks the welcome and onboarding fields", () => {
+    expect(bad({ welcomeBack: "yes" })).not.toEqual([]);
+    expect(bad({ welcomeAfterMinutes: 0 })).not.toEqual([]);
+    expect(bad({ onboarded: 1 })).not.toEqual([]);
+  });
+
+  it("accepts welcome_back as a pack message category", () => {
+    const pack = {
+      collection: "C",
+      version: "1",
+      locale: "en",
+      status: "draft",
+      messages: [{ id: "w1", category: "welcome_back", text: "Welcome back." }],
+    };
+    expect(validatePack(pack)).toEqual([]);
   });
 });

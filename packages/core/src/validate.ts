@@ -1,4 +1,4 @@
-import { CATEGORIES, MAX_MESSAGE_LENGTH } from "./types.ts";
+import { CATEGORIES, DISPLAY_STYLES, MAX_MESSAGE_LENGTH, REGULAR_CATEGORIES } from "./types.ts";
 import type { Message, MessagePack } from "./types.ts";
 
 /** Upper bound on messages in one pack; protects against absurd remote data. */
@@ -135,6 +135,37 @@ export function validateSettings(input: unknown): string[] {
   }
   if (typeof input.soundEnabled !== "boolean") {
     problems.push("soundEnabled must be true or false");
+  }
+  if (typeof input.smartPause !== "boolean") {
+    problems.push("smartPause must be true or false");
+  }
+  if (typeof input.smartPauseMic !== "boolean") {
+    problems.push("smartPauseMic must be true or false");
+  }
+  if (typeof input.launchAtLogin !== "boolean") {
+    problems.push("launchAtLogin must be true or false");
+  }
+  if (typeof input.showCountdown !== "boolean") {
+    problems.push("showCountdown must be true or false");
+  }
+  if (
+    !Array.isArray(input.enabledCategories) ||
+    input.enabledCategories.length === 0 ||
+    !input.enabledCategories.every((c) => (REGULAR_CATEGORIES as readonly unknown[]).includes(c))
+  ) {
+    problems.push(`enabledCategories must be a non-empty list of ${REGULAR_CATEGORIES.join(", ")}`);
+  }
+  if (!(DISPLAY_STYLES as readonly unknown[]).includes(input.displayStyle)) {
+    problems.push(`displayStyle must be one of ${DISPLAY_STYLES.join(", ")}`);
+  }
+  if (typeof input.welcomeBack !== "boolean") {
+    problems.push("welcomeBack must be true or false");
+  }
+  if (!isWholeMinutes(input.welcomeAfterMinutes)) {
+    problems.push(`welcomeAfterMinutes must be a whole number from 1 to ${MAX_MINUTES}`);
+  }
+  if (typeof input.onboarded !== "boolean") {
+    problems.push("onboarded must be true or false");
   }
   return problems;
 }
