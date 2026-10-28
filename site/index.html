@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Little Interruptions</title>
+<meta name="description" content="A free, open-source menu bar bell. While you work, it rings softly and shows one short, kind or silly message. Everything stays on your computer.">
+<meta name="color-scheme" content="light dark">
+<style>
+/* Layout: one asymmetric hero (words left, a live bell right), then quiet single-column sections with wide open space. */
+:root {
+  --ground: #e9f0ec;
+  --surface: #ffffff;
+  --line: #dce6df;
+  --soft: #eaf3ee;
+  --ink: #1e2b26;
+  --muted: #55695f;
+  --accent: #2f7d6b;
+  --on-accent: #ffffff;
+  --fill-from: #7cc6ad;
+  --chip: #fbe7d6;
+  --chip-ink: #a65a2b;
+  --glow: #f0b488;
+  --shadow: 0 18px 40px -16px rgb(31 60 48 / 0.35);
+  --scrim: rgb(233 240 236 / 0.78);
+  --sky: #e3edf3;
+  --blob-a: rgb(240 180 136 / 0.32);
+  --blob-b: rgb(124 198 173 / 0.38);
+  --hatch: rgb(30 43 38 / 0.16);
+  --font: ui-rounded, "SF Pro Rounded", "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #0f1714; --surface: #17211d; --line: rgb(255 255 255 / 0.09); --soft: #22302a;
+    --ink: #e6efea; --muted: #9db2a9; --accent: #6fcfb2; --on-accent: #0b1f19; --fill-from: #3e9c83;
+    --chip: #3a2a20; --chip-ink: #f6c9a8; --shadow: 0 18px 40px -16px rgb(0 0 0 / 0.7);
+    --scrim: rgb(15 23 20 / 0.78); --sky: #1f2d36; --blob-a: rgb(240 180 136 / 0.12);
+    --blob-b: rgb(62 156 131 / 0.22); --hatch: rgb(255 255 255 / 0.16); color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --ground: #0f1714; --surface: #17211d; --line: rgb(255 255 255 / 0.09); --soft: #22302a;
+  --ink: #e6efea; --muted: #9db2a9; --accent: #6fcfb2; --on-accent: #0b1f19; --fill-from: #3e9c83;
+  --chip: #3a2a20; --chip-ink: #f6c9a8; --shadow: 0 18px 40px -16px rgb(0 0 0 / 0.7);
+  --scrim: rgb(15 23 20 / 0.78); --sky: #1f2d36; --blob-a: rgb(240 180 136 / 0.12);
+  --blob-b: rgb(62 156 131 / 0.22); --hatch: rgb(255 255 255 / 0.16); color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0; background: var(--ground); color: var(--ink);
+  font-family: var(--font); font-size: 17px; line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 1040px; margin: 0 auto; }
+a { color: inherit; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; border-radius: 8px; }
+h1, h2, h3 { text-wrap: balance; line-height: 1.12; letter-spacing: -0.02em; margin: 0; }
+p { margin: 0; }
+.eyebrow { font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+
+/* top bar */
+.bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-block: 22px; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; text-decoration: none; letter-spacing: -0.01em; }
+.brand .mark { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 999px; background: var(--chip); color: var(--chip-ink); }
+.bar nav { display: flex; gap: 22px; font-size: 15px; font-weight: 600; color: var(--muted); }
+.bar nav a { text-decoration: none; }
+.bar nav a:hover { color: var(--ink); }
+
+/* hero */
+.hero-clip { position: relative; overflow: clip; margin-inline: calc(-1 * clamp(0px, 2vw, 24px)); padding-inline: clamp(0px, 2vw, 24px); }
+.hero-clip::before { content: ""; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(42% 52% at 88% 16%, var(--blob-a), transparent 70%), radial-gradient(48% 58% at 72% 86%, var(--blob-b), transparent 70%), radial-gradient(36% 44% at 6% 100%, var(--blob-b), transparent 70%); -webkit-mask-image: radial-gradient(ellipse 75% 80% at 55% 50%, #000 45%, transparent 100%); mask-image: radial-gradient(ellipse 75% 80% at 55% 50%, #000 45%, transparent 100%); }
+.hero { position: relative; display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr); gap: 56px; align-items: center; padding-block: 56px 88px; }
+.hero h1 { font-size: clamp(2.3rem, 5.4vw, 3.9rem); margin-block: 14px 20px; }
+.hero .lead { font-size: 1.18rem; color: var(--muted); max-width: 34em; }
+.actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 30px; }
+.btn { display: inline-flex; align-items: center; gap: 8px; padding: 13px 22px; border-radius: 999px; font: inherit; font-weight: 700; font-size: 15px; text-decoration: none; border: 0; cursor: pointer; transition: transform 160ms var(--ease), filter 160ms; }
+.btn:active { transform: scale(0.97); }
+.btn.primary { background: var(--accent); color: var(--on-accent); }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.soft { background: var(--surface); color: var(--ink); border: 1px solid var(--line); }
+.btn.soft:hover { background: var(--soft); }
+.fine { margin-top: 16px; font-size: 14px; color: var(--muted); }
+
+/* the live bell */
+.stage { position: relative; min-width: 0; }
+.stage > *:not(.waves) { position: relative; z-index: 1; }
+.waves { position: absolute; z-index: 0; left: 50%; top: 42%; width: 0; height: 0; pointer-events: none; }
+.waves i { position: absolute; left: -170px; top: -170px; width: 340px; height: 340px; border-radius: 50%; border: 1.5px solid var(--glow); opacity: 0; animation: resonate 9s var(--ease) infinite; }
+.waves i:nth-child(2) { animation-delay: 2.25s; }
+.waves i:nth-child(3) { animation-delay: 4.5s; }
+.waves i:nth-child(4) { animation-delay: 6.75s; }
+.waves b { position: absolute; left: -170px; top: -170px; width: 340px; height: 340px; border-radius: 50%; border: 3px solid var(--accent); opacity: 0; }
+.struck .waves b { animation: burst 1.7s var(--ease) both; }
+@keyframes resonate { 0% { opacity: 0; transform: scale(0.35) } 12% { opacity: 0.5 } 100% { opacity: 0; transform: scale(1.9) } }
+@keyframes burst { 0% { opacity: 0.7; transform: scale(0.3) } 100% { opacity: 0; transform: scale(2.3) } }
+.under { position: relative; white-space: nowrap; }
+.under svg { position: absolute; left: -2%; bottom: -0.2em; width: 104%; height: 0.32em; overflow: visible; }
+.menubar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 14px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); font-size: 13px; font-weight: 600; color: var(--muted); }
+.menubar .tray { display: inline-flex; align-items: center; gap: 6px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.card { margin-top: 14px; display: flex; align-items: center; gap: 14px; padding: 16px 18px 16px 16px; border-radius: 28px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow); }
+.card .icon { position: relative; flex: none; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 999px; background: var(--chip); color: var(--chip-ink); }
+.card .icon svg { transform-origin: 50% 60%; }
+.card .text { font-size: 17px; font-weight: 700; line-height: 1.35; min-height: 2.7em; display: flex; align-items: center; }
+.ring { position: absolute; inset: 0; border-radius: 999px; border: 2px solid var(--glow); opacity: 0; }
+.rung .ring { animation: ripple 1.4s var(--ease) both; }
+.rung .ring + .ring { animation-delay: 0.25s; }
+.rung .icon svg { animation: swing 1.5s ease-in-out 0.1s both; }
+.rung .text { animation: rise 0.5s var(--ease) both; }
+.stage .again { margin-top: 18px; }
+.panel { margin-top: 18px; padding: 18px; border-radius: 28px; background: var(--surface); border: 1px solid var(--line); }
+.panel .row { display: flex; justify-content: space-between; gap: 12px; font-weight: 700; }
+.panel .row span:last-child { color: var(--muted); font-weight: 600; font-variant-numeric: tabular-nums; }
+.track { height: 6px; border-radius: 999px; background: var(--soft); margin-top: 12px; overflow: hidden; }
+.track i { display: block; height: 100%; width: 38%; border-radius: inherit; background: linear-gradient(90deg, var(--fill-from), var(--accent)); }
+
+@keyframes swing { 0%,100% { transform: scale(1,1) } 14% { transform: scale(.88,1.14) translateY(-1px) } 34% { transform: scale(1.1,.9) translateY(1px) } 54% { transform: scale(.97,1.04) } 74% { transform: scale(1.02,.99) } }
+@keyframes ripple { 0% { opacity: 0; transform: scale(0.7) } 15% { opacity: 0.65 } 100% { opacity: 0; transform: scale(1.8) } }
+@keyframes rise { from { opacity: 0; transform: translateY(6px) } to { opacity: 1; transform: none } }
+
+/* sections */
+section { padding-block: 64px; border-top: 1px solid var(--line); }
+.head { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: 40px; margin-bottom: 36px; align-items: end; }
+.head h2 { font-size: clamp(1.7rem, 3.4vw, 2.4rem); margin-top: 10px; }
+.head p { color: var(--muted); max-width: 36em; }
+
+.day { margin-bottom: 20px; padding: 22px 22px 20px; border-radius: 28px; background: var(--surface); border: 1px solid var(--line); }
+.day-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px 24px; }
+.day-top h3 { font-size: 1.05rem; }
+.day-top p { color: var(--muted); font-size: 14.5px; margin-top: 2px; }
+.pills { display: inline-flex; padding: 4px; border-radius: 999px; background: var(--soft); gap: 2px; }
+.pills button { font: inherit; font-weight: 700; font-size: 14px; padding: 7px 16px; border: 0; border-radius: 999px; background: transparent; color: var(--muted); cursor: pointer; transition: background 200ms var(--ease), color 200ms; }
+.pills button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 2px 6px rgb(31 60 48 / 0.16); }
+.rail { position: relative; height: 92px; margin-top: 20px; }
+.rail .seg { position: absolute; top: 46px; height: 22px; border-radius: 999px; background: linear-gradient(90deg, var(--fill-from), var(--accent)); opacity: 0.9; }
+.rail .gone { position: absolute; top: 46px; height: 22px; border-radius: 999px; background: repeating-linear-gradient(135deg, var(--hatch) 0 2px, transparent 2px 8px); border: 1px dashed var(--line); }
+.rail .gone span { position: absolute; left: 50%; top: 28px; transform: translateX(-50%); font-size: 11.5px; color: var(--muted); white-space: nowrap; font-weight: 600; }
+.rail .bell { position: absolute; top: 0; width: 0; display: flex; flex-direction: column; align-items: center; animation: pop 0.55s var(--spring) both; }
+.rail .bell em { font-style: normal; font-family: var(--mono); font-size: 10.5px; color: var(--muted); transform: translateX(0); white-space: nowrap; margin-bottom: 4px; }
+.rail .bell u { display: grid; place-items: center; width: 26px; height: 26px; margin-left: 0; border-radius: 50%; background: var(--chip); color: var(--chip-ink); border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--line); transform: translateY(0); text-decoration: none; }
+.rail .bell::after { content: ""; width: 2px; height: 14px; background: var(--chip-ink); opacity: 0.35; margin-top: 2px; }
+.axis { position: relative; height: 18px; margin-top: 6px; font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.axis span { position: absolute; transform: translateX(-50%); }
+.axis span:first-child { transform: none; }
+.axis span:last-child { transform: translateX(-100%); }
+@keyframes pop { from { opacity: 0; transform: translateY(8px) scale(0.6) } to { opacity: 1; transform: none } }
+.steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.step, .kind, .tile, .look { transition: transform 260ms var(--ease), box-shadow 260ms var(--ease); }
+.step:hover, .kind:hover, .tile:hover { transform: translateY(-4px); box-shadow: var(--shadow); }
+.step { padding: 22px; border-radius: 28px; background: var(--surface); border: 1px solid var(--line); }
+.step b { display: block; font-size: 1.1rem; margin-bottom: 6px; }
+.step p { color: var(--muted); font-size: 15.5px; }
+.step .when { font-family: var(--mono); font-size: 12.5px; color: var(--accent); margin-bottom: 10px; display: block; }
+
+.kinds { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.kind { padding: 22px; border-radius: 28px; background: var(--surface); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 14px; }
+.kind h3 { font-size: 1.1rem; }
+.kind blockquote { margin: 0; padding: 14px 16px; border-radius: 20px; background: var(--soft); font-weight: 600; font-size: 15.5px; line-height: 1.45; }
+.kind:nth-child(1) blockquote { background: var(--soft); }
+.kind:nth-child(2) blockquote { background: var(--chip); }
+.kind:nth-child(3) blockquote { background: var(--sky); }
+.kind small { color: var(--muted); font-size: 14px; }
+
+.looks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.look { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.mock { position: relative; height: 150px; border-radius: 22px; overflow: hidden; background: linear-gradient(160deg, #b9cfc5, #8fb3a4); border: 1px solid var(--line); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .mock { background: linear-gradient(160deg, #2a3d36, #1a2823); } }
+:root[data-theme="dark"] .mock { background: linear-gradient(160deg, #2a3d36, #1a2823); }
+.mock::before { content: ""; position: absolute; z-index: 2; left: 0; right: 0; top: 0; height: 12px; background: var(--surface); opacity: 0.55; }
+.mock .mini { position: absolute; border-radius: 12px; background: var(--surface); box-shadow: var(--shadow); padding: 8px 10px; font-size: 11.5px; font-weight: 700; line-height: 1.3; }
+.mock.card-m .mini { right: 10px; top: 12px; width: 62%; }
+.mock.overlay-m { background: linear-gradient(160deg, #b9cfc5, #8fb3a4); }
+.mock.overlay-m::after { content: ""; position: absolute; inset: 0; background: var(--scrim); }
+.mock.overlay-m span { position: absolute; z-index: 1; inset: 0; display: grid; place-items: center; padding: 14px; text-align: center; font-weight: 700; font-size: 14px; line-height: 1.3; }
+.mock.note-m .mini { right: 10px; top: 12px; width: 70%; display: grid; gap: 1px; }
+.mock.note-m .mini em { font-style: normal; color: var(--muted); font-weight: 600; font-size: 10.5px; }
+.look:hover .mock { transform: translateY(-3px); }
+.mock { transition: transform 260ms var(--ease); }
+.look h3 { font-size: 1.05rem; }
+.look p { color: var(--muted); font-size: 15px; }
+
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.tile { padding: 24px; border-radius: 28px; background: var(--surface); border: 1px solid var(--line); }
+.tile h3 { font-size: 1.12rem; margin-bottom: 8px; }
+.tile p { color: var(--muted); font-size: 15.5px; }
+
+.facts { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; border-radius: 28px; background: var(--surface); border: 1px solid var(--line); overflow: hidden; }
+.facts li { display: grid; grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr); gap: 20px; padding: 18px 24px; }
+.facts li + li { border-top: 1px solid var(--line); }
+.facts b { font-weight: 700; }
+.facts span { color: var(--muted); font-size: 15.5px; }
+
+pre { margin: 18px 0 0; padding: 16px 18px; border-radius: 20px; background: var(--surface); border: 1px solid var(--line); overflow-x: auto; font-family: var(--mono); font-size: 13.5px; line-height: 1.7; }
+.get { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 40px; align-items: start; }
+.get h2 { font-size: clamp(1.7rem, 3.4vw, 2.4rem); margin-block: 10px 14px; }
+.get p { color: var(--muted); }
+
+footer { padding-block: 40px 56px; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 12px 28px; justify-content: space-between; color: var(--muted); font-size: 14.5px; }
+footer a { text-decoration: none; font-weight: 600; }
+footer a:hover { color: var(--ink); }
+
+@media (max-width: 860px) {
+  .hero, .head, .get { grid-template-columns: minmax(0, 1fr); }
+  .hero { gap: 40px; padding-block: 28px 56px; }
+  .steps, .kinds, .looks, .grid2 { grid-template-columns: minmax(0, 1fr); }
+  .facts li { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  .bar nav { gap: 16px; }
+  section { padding-block: 48px; }
+}
+@media (max-width: 460px) { .bar nav a:nth-child(n+3) { display: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .waves i, .struck .waves b, .rail .bell { animation: none; }
+  .waves i { opacity: 0.18; transform: scale(1.2); }
+  .step, .kind, .tile, .look, .mock { transition: none; }
+  html { scroll-behavior: auto; }
+  .rung .ring, .rung .icon svg, .rung .text { animation: none; }
+  .btn { transition: none; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="bar">
+    <a class="brand" href="#top" id="top">
+      <span class="mark"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.2C12 3.2 7.4 8.8 7.4 12.2a4.6 4.6 0 0 0 9.2 0C16.6 8.8 12 3.2 12 3.2Z"/><path d="M4.5 19c1.7 1.2 4.3 1.9 7.5 1.9s5.8-.7 7.5-1.9"/></svg></span>
+      Little Interruptions
+    </a>
+    <nav aria-label="Page">
+      <a href="#how">How it works</a>
+      <a href="#messages">Messages</a>
+      <a href="#local">Privacy</a>
+      <a href="#get">Get it</a>
+    </nav>
+  </header>
+
+  <main>
+    <div class="hero-clip"><div class="hero">
+      <div>
+        <span class="eyebrow">Free · Open source · macOS first</span>
+        <h1>Once an hour, a <span class="under">soft bell<svg viewBox="0 0 200 12" preserveAspectRatio="none" aria-hidden="true"><path d="M2 7 C 22 1, 38 12, 60 6 S 100 1, 120 7 S 168 12, 198 4" fill="none" stroke="var(--glow)" stroke-width="3.5" stroke-linecap="round"/></svg></span> and one kind sentence.</h1>
+        <p class="lead">Little Interruptions lives in your menu bar. While you work, it rings a quiet bell and shows one short message, sometimes gentle, sometimes silly. Then it gets out of the way.</p>
+        <div class="actions">
+          <a class="btn primary" href="#get">Get it</a>
+          <a class="btn soft" href="https://github.com/itsspedram/Little-Interruptions">View on GitHub</a>
+        </div>
+        <p class="fine">No account. No tracking. Everything stays on your computer.</p>
+      </div>
+
+      <div class="stage" id="stage" aria-label="A live example of the bell">
+        <div class="waves" aria-hidden="true"><i></i><i></i><i></i><i></i><b></b></div>
+        <div class="menubar">
+          <span>Little Interruptions</span>
+          <span class="tray">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.2C12 3.2 7.4 8.8 7.4 12.2a4.6 4.6 0 0 0 9.2 0C16.6 8.8 12 3.2 12 3.2Z"/><path d="M4.5 19c1.7 1.2 4.3 1.9 7.5 1.9s5.8-.7 7.5-1.9"/></svg>
+            42m
+          </span>
+        </div>
+        <div class="card rung" id="demo" role="status" aria-live="polite">
+          <span class="icon" aria-hidden="true">
+            <span class="ring"></span><span class="ring"></span>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.2C12 3.2 7.4 8.8 7.4 12.2a4.6 4.6 0 0 0 9.2 0C16.6 8.8 12 3.2 12 3.2Z"/><path d="M4.5 19c1.7 1.2 4.3 1.9 7.5 1.9s5.8-.7 7.5-1.9"/></svg>
+          </span>
+          <span class="text" id="demo-text">Your shoulders are trying to become earrings again.</span>
+        </div>
+        <button class="btn soft again" id="again" type="button">Ring it again</button>
+        <div class="panel" aria-hidden="true">
+          <div class="row"><span>Next bell in 42m</span><span>around 11:24</span></div>
+          <div class="track"><i></i></div>
+        </div>
+      </div>
+    </div></div>
+
+    <section id="how">
+      <div class="head">
+        <div><span class="eyebrow">How it works</span><h2>It counts while you sit. It rests when you leave.</h2></div>
+        <p>There is no schedule to set up. The bell starts when you sit down at the computer and starts fresh when you come back.</p>
+      </div>
+      <div class="day">
+        <div class="day-top">
+          <div><h3>A working day</h3><p id="day-note"></p></div>
+          <div class="pills" role="group" aria-label="Interval">
+            <button type="button" data-i="60" aria-pressed="true">60 min</button>
+            <button type="button" data-i="90" aria-pressed="false">90 min</button>
+            <button type="button" data-i="120" aria-pressed="false">120 min</button>
+          </div>
+        </div>
+        <div class="rail" id="rail"></div>
+        <div class="axis" id="axis" aria-hidden="true"></div>
+      </div>
+      <div class="steps">
+        <div class="step"><span class="when">you sit down</span><b>The count begins</b><p>Your first bell is one full interval away: 60, 90 or 120 minutes, or any number you choose.</p></div>
+        <div class="step"><span class="when">the time comes</span><b>One bell, one message</b><p>A soft chime and a single line. It fades on its own, or you click it away.</p></div>
+        <div class="step"><span class="when">you step away</span><b>It starts over</b><p>Five minutes without keyboard or mouse, or a sleeping laptop, ends the session. Missed bells are never replayed.</p></div>
+      </div>
+    </section>
+
+    <section id="messages">
+      <div class="head">
+        <div><span class="eyebrow">Messages</span><h2>Pick the kind you want to hear.</h2></div>
+        <p>Messages come in small packs and never repeat until you have seen them all. Turn kinds on or off whenever you like.</p>
+      </div>
+      <div class="kinds">
+        <div class="kind"><h3>Gentle</h3><blockquote>You don't have to earn a moment of peace.</blockquote><small>Soft, kind check-ins.</small></div>
+        <div class="kind"><h3>Playful</h3><blockquote>A very important announcement: nothing. Carry on.</blockquote><small>Small, silly surprises.</small></div>
+        <div class="kind"><h3>Mindful</h3><blockquote>Notice your feet. They're still down there.</blockquote><small>Tiny moments of attention.</small></div>
+      </div>
+    </section>
+
+    <section id="looks">
+      <div class="head">
+        <div><span class="eyebrow">How it appears</span><h2>Quiet card, soft overlay, or a plain notification.</h2></div>
+        <p>Choose the one that suits how you work. All three ring the same bell.</p>
+      </div>
+      <div class="looks">
+        <div class="look"><div class="mock card-m" aria-hidden="true"><div class="mini">Look at something that isn't a screen.</div></div><h3>Card</h3><p>A small card in the corner. Hover to keep reading, click to dismiss.</p></div>
+        <div class="look"><div class="mock overlay-m" aria-hidden="true"><span>Let your shoulders fall a little.</span></div><h3>Overlay</h3><p>A translucent layer over every screen. One click or Esc and it fades away.</p></div>
+        <div class="look"><div class="mock note-m" aria-hidden="true"><div class="mini"><em>Little Interruptions</em>One breath in. One breath out.</div></div><h3>Notification</h3><p>A normal system notification. It respects Do Not Disturb.</p></div>
+      </div>
+    </section>
+
+    <section id="manners">
+      <div class="head">
+        <div><span class="eyebrow">Good manners</span><h2>It knows when not to ring.</h2></div>
+        <p>A bell that interrupts the wrong moment is worse than no bell.</p>
+      </div>
+      <div class="grid2">
+        <div class="tile"><h3>Smart pause</h3><p>If a call, a video or a presentation is on, or your microphone is in use, the bell waits. It rings once when you are done, even if the call lasted hours. macOS only.</p></div>
+        <div class="tile"><h3>Welcome back</h3><p>Return after a long break, three hours by default, and you get one short hello instead of a bell.</p></div>
+        <div class="tile"><h3>Quiet for a while</h3><p>One click for an hour or three of silence, or skip just the next bell. The menu bar shows what is left.</p></div>
+        <div class="tile"><h3>Light and dark</h3><p>It follows your system appearance, with smooth, slow motion that switches off if you prefer reduced motion.</p></div>
+      </div>
+    </section>
+
+    <section id="local">
+      <div class="head">
+        <div><span class="eyebrow">Privacy</span><h2>It stays on your computer.</h2></div>
+        <p>The whole app is open source under the MIT license, so you can read exactly what it does.</p>
+      </div>
+      <ul class="facts">
+        <li><b>Accounts</b><span>None. Nothing to sign up for.</span></li>
+        <li><b>Your data</b><span>Settings and progress are saved on your machine and nowhere else.</span></li>
+        <li><b>Network</b><span>One plain request a day for new messages from this project's GitHub. Nothing about you is sent, and you can turn it off.</span></li>
+        <li><b>Microphone</b><span>Smart pause only asks the system whether a microphone is running. It never listens.</span></li>
+      </ul>
+    </section>
+
+    <section id="get">
+      <div class="get">
+        <div>
+          <span class="eyebrow">Get it</span>
+          <h2>macOS first, Windows next.</h2>
+          <p>The app is early. Until packaged downloads are published, you can build it yourself in a few minutes.</p>
+          <div class="actions"><a class="btn primary" href="https://github.com/itsspedram/Little-Interruptions">Open the repository</a></div>
+        </div>
+        <div>
+          <pre><code>git clone https://github.com/itsspedram/Little-Interruptions
+cd Little-Interruptions
+pnpm install
+pnpm build</code></pre>
+          <p class="fine">Needs Node 22.18 or newer, pnpm, and Rust. Details are in the README.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span>Little Interruptions · MIT license</span>
+    <span><a href="https://github.com/itsspedram/Little-Interruptions">GitHub</a></span>
+  </footer>
+</div>
+
+<script>
+(function () {
+  var messages = [
+    "Your shoulders are trying to become earrings again.",
+    "You don't have to earn a moment of peace.",
+    "Quick question. Have you blinked recently?",
+    "Notice your feet. They're still down there.",
+    "I think your chair has seen enough of you for today.",
+    "There's no hurry in this particular second.",
+    "Look at something that isn't a screen.",
+    "You look busy. I'll pretend I wasn't here.",
+    "One breath in. One breath out. That's enough.",
+    "Some things can wait. You're allowed to be one of them.",
+    "For five seconds, there's nowhere else you need to be."
+  ];
+  var card = document.getElementById("demo");
+  var text = document.getElementById("demo-text");
+  var button = document.getElementById("again");
+  var index = 0;
+  button.addEventListener("click", function () {
+    index = (index + 1) % messages.length;
+    text.textContent = messages[index];
+    card.classList.remove("rung");
+    void card.offsetWidth; // restart the animations
+    card.classList.add("rung");
+    var stage = document.getElementById("stage");
+    stage.classList.remove("struck");
+    void stage.offsetWidth;
+    stage.classList.add("struck");
+  });
+
+  // A working day: 9:00 to 18:00, away from 12:30 to 13:30. The count restarts when the user sits back down.
+  var DAY_START = 9 * 60, DAY_END = 18 * 60;
+  var sessions = [[9 * 60, 12 * 60 + 30], [13 * 60 + 30, 18 * 60]];
+  var rail = document.getElementById("rail");
+  var axis = document.getElementById("axis");
+  var note = document.getElementById("day-note");
+  var BELL = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.2C12 3.2 7.4 8.8 7.4 12.2a4.6 4.6 0 0 0 9.2 0C16.6 8.8 12 3.2 12 3.2Z"/><path d="M4.5 19c1.7 1.2 4.3 1.9 7.5 1.9s5.8-.7 7.5-1.9"/></svg>';
+  function pct(m) { return ((m - DAY_START) / (DAY_END - DAY_START)) * 100; }
+  function clock(m) { var h = Math.floor(m / 60), r = m % 60; return h + ":" + (r < 10 ? "0" : "") + r; }
+  function draw(interval) {
+    var html = "", counts = [];
+    sessions.forEach(function (range, si) {
+      html += '<div class="seg" style="left:' + pct(range[0]) + '%;width:' + (pct(range[1]) - pct(range[0])) + '%"></div>';
+      var n = 0;
+      for (var t = range[0] + interval; t < range[1]; t += interval) {
+        n++;
+        html += '<div class="bell" style="left:' + pct(t) + '%;animation-delay:' + ((si * 3 + n) * 70) + 'ms"><em>' + clock(t) + "</em><u>" + BELL + "</u></div>";
+      }
+      counts.push(n);
+    });
+    html += '<div class="gone" style="left:' + pct(sessions[0][1]) + '%;width:' + (pct(sessions[1][0]) - pct(sessions[0][1])) + '%"><span>away, count resets</span></div>';
+    rail.innerHTML = html;
+    note.textContent = counts[0] + " before lunch, " + counts[1] + " after. The count starts over when you sit back down.";
+  }
+  axis.innerHTML = [9, 12, 15, 18].map(function (h) { return '<span style="left:' + pct(h * 60) + '%">' + h + ":00</span>"; }).join("");
+  var pills = document.querySelectorAll(".pills button");
+  Array.prototype.forEach.call(pills, function (b) {
+    b.addEventListener("click", function () {
+      Array.prototype.forEach.call(pills, function (o) { o.setAttribute("aria-pressed", o === b ? "true" : "false"); });
+      draw(Number(b.getAttribute("data-i")));
+    });
+  });
+  draw(60);
+})();
+</script>
+</body>
+</html>
