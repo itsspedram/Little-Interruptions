@@ -11,6 +11,7 @@ export function createDefaultSettings(): Settings {
     enabledPacks: [DEFAULT_PACK],
     autoUpdatePacks: true,
     soundEnabled: true,
+    soundChoice: "drip",
     smartPause: true,
     smartPauseMic: true,
     launchAtLogin: true,

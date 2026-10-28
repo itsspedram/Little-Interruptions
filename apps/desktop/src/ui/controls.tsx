@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-/** The bell, drawn as a line icon so it looks the same everywhere and can swing. */
+/** The app mark (a drop), drawn as a line icon so it looks the same everywhere and can settle like a drop. The name is kept from when it was a bell. */
 export function BellIcon({ size = 22 }: { size?: number }) {
   return (
     <svg
@@ -14,8 +14,8 @@ export function BellIcon({ size = 22 }: { size?: number }) {
       strokeLinejoin="round"
       aria-hidden="true"
     >
-      <path d="M6 9a6 6 0 0 1 12 0c0 5 2 6.5 2 6.5H4S6 14 6 9Z" />
-      <path d="M10 19a2 2 0 0 0 4 0" />
+      <path d="M12 3.2C12 3.2 7.4 8.8 7.4 12.2a4.6 4.6 0 0 0 9.2 0C16.6 8.8 12 3.2 12 3.2Z" />
+      <path d="M4.5 19c1.7 1.2 4.3 1.9 7.5 1.9s5.8-.7 7.5-1.9" />
     </svg>
   );
 }

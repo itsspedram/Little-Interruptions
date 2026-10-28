@@ -180,6 +180,12 @@ describe("validateSettings: kinds, style and welcome", () => {
     for (const style of ["card", "overlay", "notification"]) expect(bad({ displayStyle: style })).toEqual([]);
   });
 
+  it("only accepts known sounds", () => {
+    expect(bad({ soundChoice: "airhorn" })).not.toEqual([]);
+    expect(bad({ soundChoice: "random" })).toEqual([]);
+    expect(bad({ soundChoice: "pond" })).toEqual([]);
+  });
+
   it("checks the launch-at-login switch", () => {
     expect(bad({ launchAtLogin: "yes" })).not.toEqual([]);
     expect(bad({ launchAtLogin: false })).toEqual([]);

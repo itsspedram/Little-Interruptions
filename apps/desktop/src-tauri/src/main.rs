@@ -100,14 +100,14 @@ fn place_popup(popup: &WebviewWindow) {
 }
 
 /// Shows the message the way the user chose ("card", "overlay" or "notification")
-/// and, if asked, rings the bell. A style that cannot be shown falls back to the card.
+/// and, if a sound is named, plays it. A style that cannot be shown falls back to the card.
 #[tauri::command]
 async fn show_popup(
     app: AppHandle,
     id: String,
     category: String,
     text: String,
-    sound: bool,
+    sound: Option<String>,
     style: String,
 ) -> Result<(), String> {
     let payload = BellPayload { id, category, text };
@@ -119,10 +119,16 @@ async fn show_popup(
     if shown.is_err() {
         show_card(&app, payload)?;
     }
-    if sound {
-        sound::play_bell();
+    if let Some(name) = sound {
+        sound::play(&name);
     }
     Ok(())
+}
+
+/// Plays one sound, for the preview button in settings.
+#[tauri::command]
+fn play_sound(name: String) {
+    sound::play(&name);
 }
 
 fn show_card(app: &AppHandle, payload: BellPayload) -> Result<(), String> {
@@ -475,6 +481,7 @@ fn main() {
             hide_popup,
             hide_overlay,
             take_pending_bell,
+            play_sound,
             set_tray_status,
             panel_action,
             open_settings,

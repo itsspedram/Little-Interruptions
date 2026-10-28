@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createDefaultSettings, createInitialState } from "./defaults.ts";
-import { collectMessages, collectWelcomeMessages, pickMessage, pickWelcome } from "./messages.ts";
+import { collectMessages, collectWelcomeMessages, pickMessage, pickSound, pickWelcome } from "./messages.ts";
 import { makeRandom } from "./test-utils.ts";
 import type { Message, MessagePack, State } from "./types.ts";
 
@@ -178,5 +178,23 @@ describe("message kinds", () => {
     expect(pickWelcome(list, () => 0)?.id).toBe("a");
     expect(pickWelcome(list, () => 0.99)?.id).toBe("c");
     expect(pickWelcome([], () => 0.5)).toBeNull();
+  });
+});
+
+describe("pickSound", () => {
+  it("returns the chosen sound whatever the random source says", () => {
+    const settings = { ...createDefaultSettings(), soundChoice: "pond" as const };
+    expect(pickSound(settings, () => 0)).toBe("pond");
+    expect(pickSound(settings, () => 0.99)).toBe("pond");
+  });
+
+  it("draws from every sound when the choice is random", () => {
+    const settings = { ...createDefaultSettings(), soundChoice: "random" as const };
+    expect(pickSound(settings, () => 0)).toBe("drip");
+    expect(pickSound(settings, () => 0.9999)).toBe("bubble");
+    const seen = new Set<string>();
+    const random = makeRandom(5);
+    for (let i = 0; i < 200; i++) seen.add(pickSound(settings, random));
+    expect(seen.size).toBe(10);
   });
 });
