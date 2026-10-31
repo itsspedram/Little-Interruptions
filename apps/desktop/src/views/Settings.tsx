@@ -59,7 +59,7 @@ export function SettingsView() {
         </span>
         <div>
           <h1 className="text-xl font-semibold tracking-tight">Little Interruptions</h1>
-          <p className="text-sm text-muted">A tiny bell that checks in on you.</p>
+          <p className="text-sm text-muted">A tiny drop that checks in on you.</p>
         </div>
       </header>
 
@@ -72,7 +72,7 @@ export function SettingsView() {
           <Progress value={progress} live={running} />
           <div className="flex flex-wrap gap-2">
             <Button tone="accent" onClick={() => void engine.ring()}>
-              Ring now
+              Drop now
             </Button>
             {paused ? (
               <Button onClick={() => engine.resumeNow()}>Back to normal</Button>
@@ -108,7 +108,7 @@ export function SettingsView() {
           ) : null}
           <Toggle
             label="Wait if I'm busy"
-            hint="During calls, video and presentations the bell holds back, then rings when you're done. macOS only."
+            hint="During calls, video and presentations the drop holds back, then falls when you're done. macOS only."
             checked={settings.smartPause}
             onChange={(next) => engine.updateSettings({ smartPause: next })}
           />
@@ -128,7 +128,7 @@ export function SettingsView() {
           />
           <Toggle
             label="Show time left in the menu bar"
-            hint="A small countdown next to the bell icon. macOS only."
+            hint="A small countdown next to the drop icon. macOS only."
             checked={settings.showCountdown}
             onChange={(next) => engine.updateSettings({ showCountdown: next })}
           />

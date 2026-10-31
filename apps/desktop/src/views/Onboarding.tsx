@@ -39,7 +39,7 @@ export function Onboarding() {
 
       <section className="flex-1 rounded-card border border-line bg-surface p-5">
         {step === 0 ? (
-          <Step key="interval" title="How often should I ring?" lead="The bell only counts while you're at the computer.">
+          <Step key="interval" title="How often should a drop fall?" lead="The count only runs while you're at the computer.">
             <IntervalPicker minutes={settings.intervalMinutes} />
           </Step>
         ) : null}
@@ -57,7 +57,7 @@ export function Onboarding() {
         ) : null}
 
         {step === 2 ? (
-          <Step key="behaviour" title="How should it behave?" lead="Gentle defaults. Try the bell to hear it.">
+          <Step key="behaviour" title="How should it behave?" lead="Gentle defaults. Tap Hear a drop to try it.">
             <StylePicker style={settings.displayStyle} />
             <Toggle
               label="Play a water-drop sound"
@@ -82,7 +82,7 @@ export function Onboarding() {
               checked={settings.showCountdown}
               onChange={(next) => engine.updateSettings({ showCountdown: next })}
             />
-            <Button onClick={() => void engine.ring()}>Try the bell</Button>
+            <Button onClick={() => void engine.ring()}>Hear a drop</Button>
           </Step>
         ) : null}
       </section>

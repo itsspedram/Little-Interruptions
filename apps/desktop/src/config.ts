@@ -7,7 +7,7 @@ export const APP_VERSION = "0.1.0";
  *
  * Until it is changed, the update check is switched off.
  */
-export const PACK_BASE_URL = "https://raw.githubusercontent.com/OWNER/REPO/main/packs/";
+export const PACK_BASE_URL = "https://raw.githubusercontent.com/itsspedram/Little-Interruptions/main/packs/";
 
 export function isUpdateSourceConfigured(): boolean {
   return PACK_BASE_URL.startsWith("https://") && !PACK_BASE_URL.includes("OWNER/REPO");

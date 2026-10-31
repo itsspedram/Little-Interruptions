@@ -159,7 +159,7 @@ export function StylePicker({ style }: { style: DisplayStyle }) {
   return (
     <div className="space-y-2">
       <Segmented<DisplayStyle>
-        label="How the bell appears"
+        label="How a drop appears"
         options={STYLE_OPTIONS}
         value={style}
         onChange={(next) => engine.updateSettings({ displayStyle: next })}

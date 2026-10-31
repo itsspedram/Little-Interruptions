@@ -376,7 +376,7 @@ fn show_settings(app: &AppHandle) {
 }
 
 fn build_tray(app: &tauri::App) -> tauri::Result<()> {
-    let ring_now = MenuItem::with_id(app, "ring_now", "Ring now", true, None::<&str>)?;
+    let ring_now = MenuItem::with_id(app, "ring_now", "Drop now", true, None::<&str>)?;
     let pause_hour = MenuItem::with_id(app, "pause_1h", "Quiet for 1 hour", true, None::<&str>)?;
     let pause_three = MenuItem::with_id(app, "pause_3h", "Quiet for 3 hours", true, None::<&str>)?;
     let resume = MenuItem::with_id(app, "resume", "Back to normal", true, None::<&str>)?;

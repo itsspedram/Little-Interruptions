@@ -98,7 +98,7 @@ export function Panel() {
               <div className="text-[46px] leading-none font-bold tracking-tight tabular-nums">
                 {formatRemaining(status.remainingMs)}
               </div>
-              <div className="mt-1.5 text-sm text-muted">until the next bell</div>
+              <div className="mt-1.5 text-sm text-muted">until the next drop</div>
             </>
           ) : (
             <>
@@ -111,13 +111,13 @@ export function Panel() {
         <Row order={2} className="mt-3.5">
           <Progress value={running ? status.progress : 0} live={running} />
           {running && status.busy === true ? (
-            <div className="mt-2 text-xs text-muted">Busy right now. The bell will wait for you.</div>
+            <div className="mt-2 text-xs text-muted">Busy right now. The drop will wait for you.</div>
           ) : null}
         </Row>
 
         <Row order={3} className="mt-4 flex">
           <Button tone="accent" wide onClick={() => act("ring_now")}>
-            Ring now
+            Drop now
           </Button>
         </Row>
 
