@@ -5,6 +5,11 @@ on:
   push:
     tags: ["v*"]
   workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to create, e.g. v0.1.0
+        required: true
+        default: v0.1.0
 
 permissions:
   contents: write
@@ -46,8 +51,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           projectPath: apps/desktop
-          tagName: ${{ github.ref_name }}
-          releaseName: Little Interruptions ${{ github.ref_name }}
+          tagName: ${{ inputs.tag || github.ref_name }}
+          releaseName: Little Interruptions ${{ inputs.tag || github.ref_name }}
           releaseBody: |
             Early, unsigned build. macOS: right-click the app, then Open, the first time (Gatekeeper).
             Windows: SmartScreen may warn; choose More info, then Run anyway.
