@@ -1,0 +1,56 @@
+name: Release
+
+# Push a tag like v0.1.0 to build installers and attach them to a draft GitHub Release.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            args: --target aarch64-apple-darwin
+            rust-targets: aarch64-apple-darwin
+          - os: macos-latest
+            args: --target x86_64-apple-darwin
+            rust-targets: x86_64-apple-darwin
+          - os: windows-latest
+            args: ""
+            rust-targets: ""
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust-targets }}
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: apps/desktop/src-tauri
+      - run: pnpm install --frozen-lockfile
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: apps/desktop
+          tagName: ${{ github.ref_name }}
+          releaseName: Little Interruptions ${{ github.ref_name }}
+          releaseBody: |
+            Early, unsigned build. macOS: right-click the app, then Open, the first time (Gatekeeper).
+            Windows: SmartScreen may warn; choose More info, then Run anyway.
+          releaseDraft: true
+          prerelease: true
+          args: ${{ matrix.args }}
