@@ -1,5 +1,5 @@
-import { WELCOME_CATEGORY } from "./types.ts";
-import type { Message, MessagePack, Settings, State } from "./types.ts";
+import { SOUND_IDS, WELCOME_CATEGORY } from "./types.ts";
+import type { Message, MessagePack, Settings, SoundId, State } from "./types.ts";
 
 function collect(packs: MessagePack[], settings: Settings, keep: (message: Message) => boolean): Message[] {
   const enabled = new Set(settings.enabledPacks);
@@ -77,4 +77,11 @@ export function pickMessage(
   if (message === undefined) return { message: null, state };
 
   return { message, state: { ...state, bag: bag.slice(1) } };
+}
+
+/** The sound for one bell: the chosen one, or a random one when the choice is "random". */
+export function pickSound(settings: Settings, random: () => number): SoundId {
+  if (settings.soundChoice !== "random") return settings.soundChoice;
+  const index = Math.min(SOUND_IDS.length - 1, Math.floor(random() * SOUND_IDS.length));
+  return SOUND_IDS[index] ?? "drip";
 }

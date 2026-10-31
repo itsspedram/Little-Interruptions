@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { INTERVAL_PRESETS } from "@little-interruptions/core";
 import { engine } from "../engine/engine.ts";
-import type { DisplayStyle } from "@little-interruptions/core";
-import { Segmented } from "./controls.tsx";
+import { invoke } from "@tauri-apps/api/core";
+import { SOUND_CHOICES, SOUND_IDS, pickSound } from "@little-interruptions/core";
+import type { DisplayStyle, Settings, SoundChoice } from "@little-interruptions/core";
+import { Button, Segmented } from "./controls.tsx";
 import type { SegmentOption } from "./controls.tsx";
-import { KIND_LABELS } from "./describe.ts";
+import { KIND_LABELS, SOUND_LABELS } from "./describe.ts";
 
 /** A whole-number-of-minutes field that applies on blur or Enter and explains itself when wrong. */
 export function MinutesField({
@@ -157,12 +159,43 @@ export function StylePicker({ style }: { style: DisplayStyle }) {
   return (
     <div className="space-y-2">
       <Segmented<DisplayStyle>
-        label="How the bell appears"
+        label="How a drop appears"
         options={STYLE_OPTIONS}
         value={style}
         onChange={(next) => engine.updateSettings({ displayStyle: next })}
       />
       <p className="text-xs text-muted">{STYLE_HINTS[style]}</p>
+    </div>
+  );
+}
+
+/** Which drop sound plays, with a button to hear it. "Random" previews a random one. */
+export function SoundPicker({ settings }: { settings: Settings }) {
+  const preview = () => {
+    if (!("__TAURI_INTERNALS__" in window)) return;
+    void invoke("play_sound", { name: pickSound(settings, Math.random) });
+  };
+  return (
+    <div className="flex items-center gap-2">
+      <label className="sr-only" htmlFor="sound-choice">
+        Sound
+      </label>
+      <select
+        id="sound-choice"
+        value={settings.soundChoice}
+        onChange={(event) => {
+          engine.updateSettings({ soundChoice: event.target.value as SoundChoice });
+        }}
+        className="min-w-0 flex-1 rounded-ctl border border-line bg-well px-3.5 py-2 text-sm font-medium text-ink outline-none focus:ring-2 focus:ring-accent/50"
+      >
+        {SOUND_CHOICES.map((choice) => (
+          <option key={choice} value={choice}>
+            {SOUND_LABELS[choice]}
+            {choice === "random" ? ` (one of ${SOUND_IDS.length})` : ""}
+          </option>
+        ))}
+      </select>
+      <Button onClick={preview}>Listen</Button>
     </div>
   );
 }

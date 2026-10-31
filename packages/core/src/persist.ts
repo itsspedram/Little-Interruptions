@@ -1,7 +1,7 @@
 import { createDefaultSettings, createInitialState } from "./defaults.ts";
 import { isRecord, isWholeMinutes } from "./validate.ts";
-import { DISPLAY_STYLES, REGULAR_CATEGORIES } from "./types.ts";
-import type { DisplayStyle, Settings, State } from "./types.ts";
+import { DISPLAY_STYLES, REGULAR_CATEGORIES, SOUND_CHOICES } from "./types.ts";
+import type { DisplayStyle, Settings, SoundChoice, State } from "./types.ts";
 
 function isStringList(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((item) => typeof item === "string");
@@ -26,6 +26,7 @@ export function parseSettings(input: unknown): Settings {
     enabledPacks,
     autoUpdatePacks,
     soundEnabled,
+    soundChoice,
     smartPause,
     smartPauseMic,
     launchAtLogin,
@@ -46,6 +47,9 @@ export function parseSettings(input: unknown): Settings {
     enabledPacks: isStringList(enabledPacks) ? [...enabledPacks] : defaults.enabledPacks,
     autoUpdatePacks: typeof autoUpdatePacks === "boolean" ? autoUpdatePacks : defaults.autoUpdatePacks,
     soundEnabled: typeof soundEnabled === "boolean" ? soundEnabled : defaults.soundEnabled,
+    soundChoice: (SOUND_CHOICES as readonly unknown[]).includes(soundChoice)
+      ? (soundChoice as SoundChoice)
+      : defaults.soundChoice,
     smartPause: typeof smartPause === "boolean" ? smartPause : defaults.smartPause,
     smartPauseMic: typeof smartPauseMic === "boolean" ? smartPauseMic : defaults.smartPauseMic,
     launchAtLogin: typeof launchAtLogin === "boolean" ? launchAtLogin : defaults.launchAtLogin,

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="claude:viewport-fit-sides" content="cover">
 <title>Little Interruptions</title>
-<meta name="description" content="A free, open-source menu bar bell. While you work, it rings softly and shows one short, kind or silly message. Everything stays on your computer.">
+<meta name="description" content="A free, open-source menu bar app. While you work, a soft water drop falls and shows one short, kind or silly message. Everything stays on your computer.">
 <meta name="color-scheme" content="light dark">
 <style>
 /* Layout: one asymmetric hero (words left, a live bell right), then quiet single-column sections with wide open space. */
@@ -244,8 +244,8 @@ footer a:hover { color: var(--ink); }
     <div class="hero-clip"><div class="hero">
       <div>
         <span class="eyebrow">Free · Open source · macOS first</span>
-        <h1>Once an hour, a <span class="under">soft bell<svg viewBox="0 0 200 12" preserveAspectRatio="none" aria-hidden="true"><path d="M2 7 C 22 1, 38 12, 60 6 S 100 1, 120 7 S 168 12, 198 4" fill="none" stroke="var(--glow)" stroke-width="3.5" stroke-linecap="round"/></svg></span> and one kind sentence.</h1>
-        <p class="lead">Little Interruptions lives in your menu bar. While you work, it rings a quiet bell and shows one short message, sometimes gentle, sometimes silly. Then it gets out of the way.</p>
+        <h1>Once an hour, a <span class="under">soft drop<svg viewBox="0 0 200 12" preserveAspectRatio="none" aria-hidden="true"><path d="M2 7 C 22 1, 38 12, 60 6 S 100 1, 120 7 S 168 12, 198 4" fill="none" stroke="var(--glow)" stroke-width="3.5" stroke-linecap="round"/></svg></span> and one kind sentence.</h1>
+        <p class="lead">Little Interruptions lives in your menu bar. While you work, it lets a quiet drop fall and shows one short message, sometimes gentle, sometimes silly. Then it gets out of the way.</p>
         <div class="actions">
           <a class="btn primary" href="#get">Get it</a>
           <a class="btn soft" href="https://github.com/itsspedram/Little-Interruptions">View on GitHub</a>
@@ -253,7 +253,7 @@ footer a:hover { color: var(--ink); }
         <p class="fine">No account. No tracking. Everything stays on your computer.</p>
       </div>
 
-      <div class="stage" id="stage" aria-label="A live example of the bell">
+      <div class="stage" id="stage" aria-label="A live example of a drop">
         <div class="waves" aria-hidden="true"><i></i><i></i><i></i><i></i><b></b></div>
         <div class="menubar">
           <span>Little Interruptions</span>
@@ -269,9 +269,9 @@ footer a:hover { color: var(--ink); }
           </span>
           <span class="text" id="demo-text">Your shoulders are trying to become earrings again.</span>
         </div>
-        <button class="btn soft again" id="again" type="button">Ring it again</button>
+        <button class="btn soft again" id="again" type="button">Drop again</button>
         <div class="panel" aria-hidden="true">
-          <div class="row"><span>Next bell in 42m</span><span>around 11:24</span></div>
+          <div class="row"><span>Next drop in 42m</span><span>around 11:24</span></div>
           <div class="track"><i></i></div>
         </div>
       </div>
@@ -280,7 +280,7 @@ footer a:hover { color: var(--ink); }
     <section id="how">
       <div class="head">
         <div><span class="eyebrow">How it works</span><h2>It counts while you sit. It rests when you leave.</h2></div>
-        <p>There is no schedule to set up. The bell starts when you sit down at the computer and starts fresh when you come back.</p>
+        <p>There is no schedule to set up. The count starts when you sit down at the computer and starts fresh when you come back.</p>
       </div>
       <div class="day">
         <div class="day-top">
@@ -295,9 +295,9 @@ footer a:hover { color: var(--ink); }
         <div class="axis" id="axis" aria-hidden="true"></div>
       </div>
       <div class="steps">
-        <div class="step"><span class="when">you sit down</span><b>The count begins</b><p>Your first bell is one full interval away: 60, 90 or 120 minutes, or any number you choose.</p></div>
-        <div class="step"><span class="when">the time comes</span><b>One bell, one message</b><p>A soft chime and a single line. It fades on its own, or you click it away.</p></div>
-        <div class="step"><span class="when">you step away</span><b>It starts over</b><p>Five minutes without keyboard or mouse, or a sleeping laptop, ends the session. Missed bells are never replayed.</p></div>
+        <div class="step"><span class="when">you sit down</span><b>The count begins</b><p>Your first drop is one full interval away: 60, 90 or 120 minutes, or any number you choose.</p></div>
+        <div class="step"><span class="when">the time comes</span><b>One drop, one message</b><p>A soft water-drop sound and a single line. It fades on its own, or you click it away.</p></div>
+        <div class="step"><span class="when">you step away</span><b>It starts over</b><p>Five minutes without keyboard or mouse, or a sleeping laptop, ends the session. Missed drops are never replayed.</p></div>
       </div>
     </section>
 
@@ -316,24 +316,24 @@ footer a:hover { color: var(--ink); }
     <section id="looks">
       <div class="head">
         <div><span class="eyebrow">How it appears</span><h2>Quiet card, soft overlay, or a plain notification.</h2></div>
-        <p>Choose the one that suits how you work. All three ring the same bell.</p>
+        <p>Choose the one that suits how you work. All three play the same drop.</p>
       </div>
       <div class="looks">
         <div class="look"><div class="mock card-m" aria-hidden="true"><div class="mini">Look at something that isn't a screen.</div></div><h3>Card</h3><p>A small card in the corner. Hover to keep reading, click to dismiss.</p></div>
         <div class="look"><div class="mock overlay-m" aria-hidden="true"><span>Let your shoulders fall a little.</span></div><h3>Overlay</h3><p>A translucent layer over every screen. One click or Esc and it fades away.</p></div>
-        <div class="look"><div class="mock note-m" aria-hidden="true"><div class="mini"><em>Little Interruptions</em>One breath in. One breath out.</div></div><h3>Notification</h3><p>A normal system notification. It respects Do Not Disturb.</p></div>
+        <div class="look"><div class="mock note-m" aria-hidden="true"><div class="mini"><em>Little Interruptions</em>One breath in. One breath out.</div></div><h3>Notification</h3><p>A normal system notification, so it follows your system notification settings.</p></div>
       </div>
     </section>
 
     <section id="manners">
       <div class="head">
-        <div><span class="eyebrow">Good manners</span><h2>It knows when not to ring.</h2></div>
-        <p>A bell that interrupts the wrong moment is worse than no bell.</p>
+        <div><span class="eyebrow">Good manners</span><h2>It knows when not to fall.</h2></div>
+        <p>A drop that lands at the wrong moment is worse than no drop.</p>
       </div>
       <div class="grid2">
-        <div class="tile"><h3>Smart pause</h3><p>If a call, a video or a presentation is on, or your microphone is in use, the bell waits. It rings once when you are done, even if the call lasted hours. macOS only.</p></div>
-        <div class="tile"><h3>Welcome back</h3><p>Return after a long break, three hours by default, and you get one short hello instead of a bell.</p></div>
-        <div class="tile"><h3>Quiet for a while</h3><p>One click for an hour or three of silence, or skip just the next bell. The menu bar shows what is left.</p></div>
+        <div class="tile"><h3>Smart pause</h3><p>If a call, a video or a presentation is on, or your microphone is in use, the drop waits. It falls once when you are done, even if the call lasted hours. macOS only.</p></div>
+        <div class="tile"><h3>Welcome back</h3><p>Return after a long break, three hours by default, and you get one short hello instead of a drop.</p></div>
+        <div class="tile"><h3>Quiet for a while</h3><p>One click for an hour or three of silence, or skip just the next drop. The menu bar shows what is left.</p></div>
         <div class="tile"><h3>Light and dark</h3><p>It follows your system appearance, with smooth, slow motion that switches off if you prefer reduced motion.</p></div>
       </div>
     </section>

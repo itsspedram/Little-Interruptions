@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { engine } from "../engine/engine.ts";
 import { useEngine } from "../engine/useEngine.ts";
 import { BellIcon, Button, Toggle } from "../ui/controls.tsx";
-import { IntervalPicker, KindPicker, StylePicker } from "../ui/fields.tsx";
+import { IntervalPicker, KindPicker, SoundPicker, StylePicker } from "../ui/fields.tsx";
 
 const STEPS = 3;
 
@@ -39,7 +39,7 @@ export function Onboarding() {
 
       <section className="flex-1 rounded-card border border-line bg-surface p-5">
         {step === 0 ? (
-          <Step key="interval" title="How often should I ring?" lead="The bell only counts while you're at the computer.">
+          <Step key="interval" title="How often should a drop fall?" lead="The count only runs while you're at the computer.">
             <IntervalPicker minutes={settings.intervalMinutes} />
           </Step>
         ) : null}
@@ -57,13 +57,14 @@ export function Onboarding() {
         ) : null}
 
         {step === 2 ? (
-          <Step key="behaviour" title="How should it behave?" lead="Gentle defaults. Try the bell to hear it.">
+          <Step key="behaviour" title="How should it behave?" lead="Gentle defaults. Tap Hear a drop to try it.">
             <StylePicker style={settings.displayStyle} />
             <Toggle
-              label="Play the bell sound"
+              label="Play a water-drop sound"
               checked={settings.soundEnabled}
               onChange={(next) => engine.updateSettings({ soundEnabled: next })}
             />
+            {settings.soundEnabled ? <SoundPicker settings={settings} /> : null}
             <Toggle
               label="Wait if I'm busy"
               hint="Holds back during calls and presentations. macOS only."
@@ -81,7 +82,7 @@ export function Onboarding() {
               checked={settings.showCountdown}
               onChange={(next) => engine.updateSettings({ showCountdown: next })}
             />
-            <Button onClick={() => void engine.ring()}>Try the bell</Button>
+            <Button onClick={() => void engine.ring()}>Hear a drop</Button>
           </Step>
         ) : null}
       </section>

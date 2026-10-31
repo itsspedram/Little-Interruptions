@@ -1,12 +1,13 @@
 # Little Interruptions
 
-A tiny, free, open-source tray app inspired by the meditation bell: while you work, it rings a soft bell every so often and shows one short, gentle (sometimes funny) message. Then it gets out of the way.
+A tiny, free, open-source tray app inspired by the meditation bell: while you work, a soft water drop falls every so often, with one short, gentle (sometimes funny) message. Then it gets out of the way.
 
 - Free, no accounts, everything stays on your computer.
 - Interval: 60 / 90 / 120 minutes, or any number of minutes you choose.
-- No schedule to configure: the bell counts from when you sit down. Step away or sleep the machine and the next session starts fresh.
-- Left-click the bell in the menu bar for a quick panel (time left, ring now, quiet for a while, change the interval). Right-click for the classic menu.
-- Smart pause (macOS): if a call, video or presentation is keeping the display awake, or a microphone is in use, when a bell is due, the bell waits and rings once you're done.
+- No schedule to configure: the count starts when you sit down. Step away or sleep the machine and the next session starts fresh.
+- Left-click the drop in the menu bar for a quick panel (time left, drop now, quiet for a while, change the interval). Right-click for the classic menu.
+- Smart pause (macOS): if a call, video or presentation is keeping the display awake, or a microphone is in use, when a drop is due, it waits and falls once you're done.
+- Sound: a water drop, one of ten (or random). The sounds in `apps/desktop/src-tauri/assets/drops` are placeholders made by `scripts/generate-drops.py` until real CC0 recordings replace them.
 - Messages live in local JSON packs (`/packs`). Once a day the app fetches the pack files from this repository and adds any new messages. It never deletes your local ones. This is the app's only network request (a plain GET of static JSON); you can turn it off in Settings.
 
 > Status: early. macOS first, Windows next.
@@ -24,7 +25,7 @@ pnpm dev                # runs the desktop app
 pnpm build              # produces an installer
 ```
 
-Before the daily update works, set your repository in `apps/desktop/src/config.ts` (`PACK_BASE_URL`, replace `OWNER/REPO`).
+The daily update reads `packs/` from this repository's `main` branch (`PACK_BASE_URL` in `apps/desktop/src/config.ts`). If you fork the project, point it at your fork.
 
 ### Layout
 
